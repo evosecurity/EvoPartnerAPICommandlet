@@ -1,0 +1,68 @@
+function New-EvoAccessToken {
+    <#
+    .SYNOPSIS
+        Create a new access token.
+
+    .DESCRIPTION
+        Creates a new access token via the /v1/access_tokens endpoint.
+
+    .PARAMETER Name
+        The name of the access token.
+
+    .PARAMETER DirectoryId
+        The directory ID associated with this token.
+
+    .PARAMETER Type
+        The type of the token: endpoint_agent or ldap_agent.
+
+    .PARAMETER ExpireAt
+        Optional expiration date/time for the token.
+    #>
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [string]$Name,
+
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [string]$DirectoryId,
+
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [ValidateSet('endpoint_agent','ldap_agent')]
+        [string]$Type,
+
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [datetime]$ExpireAt
+    )
+
+    process {
+        if (-not $PSCmdlet.ShouldProcess("Access token '$Name'", 'Create')) {
+            return
+        }
+
+        $body = @{
+            name        = $Name
+            directoryId = $DirectoryId
+        }
+
+        if ($PSBoundParameters.ContainsKey('Type') -and $Type) {
+            $body['type'] = $Type
+        }
+
+        if ($PSBoundParameters.ContainsKey('ExpireAt')) {
+            $body['expireAt'] = $ExpireAt.ToString('o')
+        }
+
+        $response = Invoke-EvoApiRequest -Method 'POST' -Path '/v1/access_tokens' -Body $body
+
+        if ($null -ne $response -and $response.PSObject.Properties['data']) {
+            $token = $response.data
+            if ($token -is [pscustomobject]) {
+                $token.PSObject.TypeNames.Insert(0, 'Evo.AccessToken')
+            }
+            Write-Output $token
+        }
+        else {
+            Write-Output $response
+        }
+    }
+}
