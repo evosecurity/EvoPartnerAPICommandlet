@@ -36,6 +36,66 @@ non-developers to use while remaining powerful for automation and scripting.
    Import-Module EvoPartnerAPICommandlet
    ```
 
+### 1.2 Install from GitHub Packages
+
+MSPs or technicians can install the module directly from GitHub instead of copying files around if desired.
+This makes getting updates significantly easier as well.
+
+> You need a free GitHub account and a personal access token (PAT) with
+> `read:packages` permission. The source repository can remain public.
+
+1. **Create a GitHub personal access token (classic)**
+
+   1. Sign in to GitHub.
+   2. Go to **Settings → Developer settings → Personal access
+      tokens → Tokens (classic)** or open:
+
+      <https://github.com/settings/tokens>
+
+   3. Click **Generate new token (classic)**.
+   4. Give it a name like `EvoPartnerAPICommandlet-packages`.
+   5. Set an expiration that matches your security policy.
+   6. Check the **`read:packages`** scope (you do **not** need full
+      `repo` access just to install packages).
+   7. Click **Generate token** and **copy the token value** somewhere
+      safe. You will not be able to see it again.
+
+2. **Create credentials and register the GitHub Packages feed**
+
+   Run the following in an elevated PowerShell session, replacing the
+   placeholders with your own GitHub username and the PAT from step 1:
+
+   ```powershell
+   $owner = 'evosecurity'                 # GitHub org that owns the package
+   $user  = '<YOUR_GITHUB_USERNAME>'      # your GitHub username
+   $token = '<PAT_FROM_STEP_1>'           # the PAT with read:packages
+
+   $secureToken = ConvertTo-SecureString $token -AsPlainText -Force
+   $creds       = New-Object System.Management.Automation.PSCredential($user, $secureToken)
+
+   # Register NuGet source used under the hood by PowerShellGet
+   Register-PackageSource -Name GitHubPackages `
+     -ProviderName NuGet `
+     -Location "https://nuget.pkg.github.com/$owner/index.json" `
+     -Credential $creds `
+     -Trusted -Force
+
+   # Register as a PowerShell repository so Install-Module can use it
+   Register-PSRepository -Name GitHubPackages `
+     -SourceLocation "https://nuget.pkg.github.com/$owner/index.json" `
+     -InstallationPolicy Trusted
+   ```
+
+3. **Install the module from GitHub Packages**
+
+   ```powershell
+   Install-Module EvoPartnerAPICommandlet -Repository GitHubPackages -Credential $creds
+   ```
+
+   You only need to register the source/repository once per machine.
+   After that, `Install-Module` and `Update-Module` work like any other
+   PowerShell repository that you trust.
+
 ---
 
 ## 2. Configuration & Authentication
