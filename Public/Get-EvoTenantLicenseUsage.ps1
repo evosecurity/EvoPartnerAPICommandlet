@@ -19,6 +19,17 @@ function Get-EvoTenantLicenseUsage {
     process {
         $path = "/v1/tenants/$TenantId/licenses/usage"
         $response = Invoke-EvoApiRequest -Method 'GET' -Path $path
-        Write-Output $response
+
+        if ($null -ne $response -and $response.PSObject.Properties['data']) {
+            foreach ($usage in $response.data) {
+                if ($usage -is [pscustomobject]) {
+                    $usage.PSObject.TypeNames.Insert(0, 'Evo.TenantLicenseUsage')
+                }
+                Write-Output $usage
+            }
+        }
+        else {
+            Write-Output $response
+        }
     }
 }

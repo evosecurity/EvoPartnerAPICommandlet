@@ -17,10 +17,23 @@ function Get-EvoPartnerApiConfig {
     [CmdletBinding()]
     param()
 
-    $config = $script:EvoPartnerApiConfig.Clone()
-    if ($config.Contains('ApiKey') -and $config.ApiKey) {
-        $config.ApiKey = '[REDACTED]'
+    if (-not $script:EvoPartnerApiConfig) {
+        $script:EvoPartnerApiConfig = [ordered]@{
+            BaseUri          = 'https://partner-api.evosecurity.com'
+            ApiKey           = $null
+            DefaultPageSize  = 20
+            RetryOnRateLimit = $false
+        }
     }
 
-    [pscustomobject]$config
+    $configCopy = [ordered]@{}
+    foreach ($key in $script:EvoPartnerApiConfig.Keys) {
+        $configCopy[$key] = $script:EvoPartnerApiConfig[$key]
+    }
+
+    if ($configCopy.Contains('ApiKey') -and $configCopy['ApiKey']) {
+        $configCopy['ApiKey'] = '[REDACTED]'
+    }
+
+    [pscustomobject]$configCopy
 }
