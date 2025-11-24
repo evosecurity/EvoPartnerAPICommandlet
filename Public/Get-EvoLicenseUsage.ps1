@@ -11,5 +11,16 @@ function Get-EvoLicenseUsage {
     param()
 
     $response = Invoke-EvoApiRequest -Method 'GET' -Path '/v1/licenses/usage'
-    Write-Output $response
+
+    if ($null -ne $response -and $response.PSObject.Properties['data']) {
+        foreach ($item in $response.data) {
+            if ($item -is [pscustomobject]) {
+                $item.PSObject.TypeNames.Insert(0, 'Evo.LicenseUsageSummary')
+            }
+            Write-Output $item
+        }
+    }
+    else {
+        Write-Output $response
+    }
 }
