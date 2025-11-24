@@ -23,12 +23,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Pester
+      - name: Install Pester 5
         shell: pwsh
         run: |
-          if (-not (Get-Module -ListAvailable -Name Pester)) {
-            Install-Module Pester -Force -SkipPublisherCheck -Scope CurrentUser
-          }
+          Install-Module -Name Pester -MinimumVersion 5.0.0 -Force -SkipPublisherCheck -Scope CurrentUser
+          Import-Module -Name Pester -Force
+          $p = Get-Module Pester
+          Write-Host "Using Pester version $($p.Version)"
 
       - name: Run tests
         shell: pwsh

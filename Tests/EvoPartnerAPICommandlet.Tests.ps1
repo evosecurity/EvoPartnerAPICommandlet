@@ -11,12 +11,12 @@ Describe 'EvoPartnerAPICommandlet module' {
     }
 
     It 'imports without error' {
-        Get-Module EvoPartnerAPICommandlet | Should Not BeNullOrEmpty
+        Get-Module EvoPartnerAPICommandlet | Should -Not -BeNullOrEmpty
     }
 
     Context 'HTTP mocking layer' {
         BeforeEach {
-            Mock Invoke-RestMethod {
+            Mock -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -MockWith {
                 [pscustomobject]@{
                     data       = @()
                     pagination = [pscustomobject]@{
@@ -28,11 +28,11 @@ Describe 'EvoPartnerAPICommandlet module' {
         }
 
         It 'Get-EvoUser uses mocked HTTP and does not throw' {
-            { Get-EvoUser -Limit 1 } | Should Not Throw
+            { Get-EvoUser -Limit 1 } | Should -Not -Throw
         }
 
         It 'Test-EvoPartnerApiHealth uses mocked HTTP and does not throw' {
-            { Test-EvoPartnerApiHealth } | Should Not Throw
+            { Test-EvoPartnerApiHealth } | Should -Not -Throw
         }
     }
 }
@@ -43,7 +43,7 @@ InModuleScope EvoPartnerAPICommandlet {
             $script:EvoPartnerApiConfig.RetryOnRateLimit = $true
 
             $callCount = 0
-            Mock Invoke-RestMethod {
+            Mock -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -MockWith {
                 $script:callCount++
 
                 if ($script:callCount -lt 2) {
@@ -65,8 +65,8 @@ InModuleScope EvoPartnerAPICommandlet {
                 [pscustomobject]@{ data = @() }
             }
 
-            { Invoke-EvoApiRequest -Method 'GET' -Path '/v1/users' } | Should Not Throw
-            $script:callCount | Should Be 2
+            { Invoke-EvoApiRequest -Method 'GET' -Path '/v1/users' } | Should -Not -Throw
+            $script:callCount | Should -Be 2
         }
     }
 }
