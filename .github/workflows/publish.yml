@@ -23,15 +23,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Pester 3.4.0
+      - name: Install Pester 5
         shell: pwsh
         run: |
-          $version = [version]'3.4.0'
-          $installed = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -eq $version }
-          if (-not $installed) {
-            Install-Module -Name Pester -RequiredVersion $version -Force -SkipPublisherCheck -Scope CurrentUser
-          }
-          Import-Module -Name Pester -RequiredVersion $version -Force
+          Install-Module -Name Pester -MinimumVersion 5.0.0 -Force -SkipPublisherCheck -Scope CurrentUser
+          Import-Module -Name Pester -Force
           $p = Get-Module Pester
           Write-Host "Using Pester version $($p.Version)"
 
