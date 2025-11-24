@@ -52,7 +52,7 @@ function New-EvoUserBulk {
                 email       = $u.Email
                 firstName   = $u.FirstName
                 lastName    = $u.LastName
-                isAdmin     = $u.IsAdmin
+                isAdmin     = [bool]$u.IsAdmin
                 directoryId = $u.DirectoryId
             }
 
