@@ -42,6 +42,43 @@ function New-EvoUserBulk {
             return
         }
 
+        function ConvertTo-EvoBooleanFromCsv {
+            param(
+                [Parameter(Mandatory = $false)]
+                [object]$Value
+            )
+
+            if ($null -eq $Value) {
+                return $false
+            }
+
+            if ($Value -is [bool]) {
+                return $Value
+            }
+
+            if ($Value -is [int] -or $Value -is [long]) {
+                return [bool]([int]$Value)
+            }
+
+            $s = $Value.ToString().Trim().ToLowerInvariant()
+
+            if ($s -eq '') {
+                return $false
+            }
+
+            switch ($s) {
+                'true'  { return $true }
+                '1'     { return $true }
+                'yes'   { return $true }
+                'y'     { return $true }
+                'false' { return $false }
+                '0'     { return $false }
+                'no'    { return $false }
+                'n'     { return $false }
+                default { return $false }
+            }
+        }
+
         if (-not $PSCmdlet.ShouldProcess("$($buffer.Count) users", 'Bulk create')) {
             return
         }
@@ -52,7 +89,7 @@ function New-EvoUserBulk {
                 email       = $u.Email
                 firstName   = $u.FirstName
                 lastName    = $u.LastName
-                isAdmin     = [bool]$u.IsAdmin
+                isAdmin     = ConvertTo-EvoBooleanFromCsv -Value $u.IsAdmin
                 directoryId = $u.DirectoryId
             }
 
@@ -65,7 +102,7 @@ function New-EvoUserBulk {
             }
 
             if ($u.PSObject.Properties['SendWelcomeEmail']) {
-                $item['sendWelcomeEmail'] = [bool]$u.SendWelcomeEmail
+                $item['sendWelcomeEmail'] = ConvertTo-EvoBooleanFromCsv -Value $u.SendWelcomeEmail
             }
 
             $usersPayload += $item
