@@ -138,6 +138,7 @@ function Invoke-EvoApiRequest {
             $rateLimitRemaining = $null
             $rateLimitReset = $null
             $retryAfterSeconds = $null
+            $rawError = $null
 
             if ($ex.PSObject.Properties['Response']) {
                 $response = $ex.Response
@@ -211,6 +212,10 @@ function Invoke-EvoApiRequest {
                 elseif ($rawError) {
                     $errorBodyInfo = " API Error=$rawError."
                 }
+            }
+
+            if ($rawError) {
+                Write-Verbose ("[Invoke-EvoApiRequest] Raw error body:`n" + $rawError)
             }
 
             $message = "Error calling Evo Partner API {0} {1}.{2}{3}{4} {5}" -f $Method, $finalUri, $statusInfo, $rateLimitInfo, $errorBodyInfo, $ex.Message

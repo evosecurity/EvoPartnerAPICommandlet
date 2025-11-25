@@ -69,12 +69,8 @@ function New-EvoUserBulk {
             switch ($s) {
                 'true'  { return $true }
                 '1'     { return $true }
-                'yes'   { return $true }
-                'y'     { return $true }
                 'false' { return $false }
                 '0'     { return $false }
-                'no'    { return $false }
-                'n'     { return $false }
                 default { return $false }
             }
         }
@@ -112,7 +108,32 @@ function New-EvoUserBulk {
             users = $usersPayload
         }
 
+        Write-Verbose ("[New-EvoUserBulk] Request body:`n" + ($body | ConvertTo-Json -Depth 10))
+
         $response = Invoke-EvoApiRequest -Method 'POST' -Path '/v1/users/bulk' -Body $body
+
+        if ($response -and $response.PSObject.Properties['data'] -and $response.data -and $response.data.PSObject.Properties['failedItems'] -and $response.data.failedItems) {
+            $failedItems = $response.data.failedItems
+            $failedCount = @($failedItems).Count
+            if ($failedCount -gt 0) {
+                Write-Warning ("{0} user(s) failed to be created in bulk operation." -f $failedCount)
+                foreach ($fi in $failedItems) {
+                    $email = $null
+                    $error = $null
+                    if ($fi -and $fi.PSObject.Properties['email']) { $email = $fi.email }
+                    if ($fi -and $fi.PSObject.Properties['error']) { $error = $fi.error }
+
+                    if ($email -and $error) {
+                        Write-Warning ("  {0}: {1}" -f $email, $error)
+                    } elseif ($email) {
+                        Write-Warning ("  {0}: (no error message provided)" -f $email)
+                    } elseif ($error) {
+                        Write-Warning ("  (no email): {0}" -f $error)
+                    }
+                }
+            }
+        }
+
         Write-Output $response
     }
 }
