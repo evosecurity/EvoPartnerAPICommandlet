@@ -42,6 +42,39 @@ function New-EvoUserBulk {
             return
         }
 
+        function ConvertTo-EvoBooleanFromCsv {
+            param(
+                [Parameter(Mandatory = $false)]
+                [object]$Value
+            )
+
+            if ($null -eq $Value) {
+                return $false
+            }
+
+            if ($Value -is [bool]) {
+                return $Value
+            }
+
+            if ($Value -is [int] -or $Value -is [long]) {
+                return [bool]([int]$Value)
+            }
+
+            $s = $Value.ToString().Trim().ToLowerInvariant()
+
+            if ($s -eq '') {
+                return $false
+            }
+
+            switch ($s) {
+                'true'  { return $true }
+                '1'     { return $true }
+                'false' { return $false }
+                '0'     { return $false }
+                default { return $false }
+            }
+        }
+
         if (-not $PSCmdlet.ShouldProcess("$($buffer.Count) users", 'Bulk create')) {
             return
         }
@@ -52,7 +85,7 @@ function New-EvoUserBulk {
                 email       = $u.Email
                 firstName   = $u.FirstName
                 lastName    = $u.LastName
-                isAdmin     = $u.IsAdmin
+                isAdmin     = ConvertTo-EvoBooleanFromCsv -Value $u.IsAdmin
                 directoryId = $u.DirectoryId
             }
 
@@ -65,7 +98,7 @@ function New-EvoUserBulk {
             }
 
             if ($u.PSObject.Properties['SendWelcomeEmail']) {
-                $item['sendWelcomeEmail'] = [bool]$u.SendWelcomeEmail
+                $item['sendWelcomeEmail'] = ConvertTo-EvoBooleanFromCsv -Value $u.SendWelcomeEmail
             }
 
             $usersPayload += $item
@@ -75,7 +108,32 @@ function New-EvoUserBulk {
             users = $usersPayload
         }
 
+        Write-Verbose ("[New-EvoUserBulk] Request body:`n" + ($body | ConvertTo-Json -Depth 10))
+
         $response = Invoke-EvoApiRequest -Method 'POST' -Path '/v1/users/bulk' -Body $body
+
+        if ($response -and $response.PSObject.Properties['data'] -and $response.data -and $response.data.PSObject.Properties['failedItems'] -and $response.data.failedItems) {
+            $failedItems = $response.data.failedItems
+            $failedCount = @($failedItems).Count
+            if ($failedCount -gt 0) {
+                Write-Warning ("{0} user(s) failed to be created in bulk operation." -f $failedCount)
+                foreach ($fi in $failedItems) {
+                    $email = $null
+                    $error = $null
+                    if ($fi -and $fi.PSObject.Properties['email']) { $email = $fi.email }
+                    if ($fi -and $fi.PSObject.Properties['error']) { $error = $fi.error }
+
+                    if ($email -and $error) {
+                        Write-Warning ("  {0}: {1}" -f $email, $error)
+                    } elseif ($email) {
+                        Write-Warning ("  {0}: (no error message provided)" -f $email)
+                    } elseif ($error) {
+                        Write-Warning ("  (no email): {0}" -f $error)
+                    }
+                }
+            }
+        }
+
         Write-Output $response
     }
 }

@@ -154,6 +154,98 @@ catch {
 If `-RetryOnRateLimit` is enabled via `Set-EvoPartnerApiConfig`, the module
 will perform a simple retry for 429 responses based on server hints.
 
+### 3.1 Debugging when scripting cmdlets
+
+When you are writing automation or runbooks, it can be useful to see the
+exact JSON being sent to and returned from the Evo Partner API.
+
+- **Verbose HTTP error details**
+
+  The shared HTTP helper writes the raw JSON error body as verbose output
+  when the API returns an error. Run any cmdlet with `-Verbose` to see it:
+
+  ```powershell
+  try {
+      Get-EvoUser -Id 'BAD_ID' -Verbose
+  }
+  catch {
+      # High-level message
+      Write-Host $_.Exception.Message -ForegroundColor Red
+  }
+  ```
+
+  On failure you will see a line similar to:
+
+  ```text
+  [Invoke-EvoApiRequest] Raw error body:
+  {"code":"ValidationError","message":"Validation failed",...}
+  ```
+
+- **Inspect error JSON in scripts**
+
+  If you need to branch logic based on the error code/message, you can
+  parse the JSON inside `catch`:
+
+  ```powershell
+  try {
+      Get-EvoUser -Id 'BAD_ID'
+  }
+  catch {
+      $raw = $_.Exception.InnerException.ErrorDetails.Message
+      $errorJson = $null
+      if ($raw) {
+          $errorJson = $raw | ConvertFrom-Json -ErrorAction SilentlyContinue
+      }
+
+      if ($errorJson -and $errorJson.code -eq 'ValidationError') {
+          Write-Warning "Validation error from Evo API: $($errorJson.message)"
+      }
+      else {
+          Write-Warning "Evo API call failed: $($_.Exception.Message)"
+      }
+  }
+  ```
+
+- **Seeing bulk request bodies**
+
+  Bulk cmdlets such as `New-EvoUserBulk` log the request body as verbose
+  output before calling the API. This is extremely helpful when debugging
+  CSV imports:
+
+  ```powershell
+  Import-Csv .\users.csv | New-EvoUserBulk -Verbose
+  ```
+
+  The verbose output includes a JSON representation of the `users` array
+  being posted to `/v1/users/bulk`.
+
+- **Bulk operations and partial failures**
+
+  Bulk endpoints return HTTP 201 even when some items fail. The response
+  body includes a `failedItems` array. Bulk cmdlets in this module:
+
+  - Return the full API response object.
+  - Emit `Write-Warning` messages when `failedItems` is non-empty.
+
+  Example scripting pattern:
+
+  ```powershell
+  $response = Import-Csv .\users.csv | New-EvoUserBulk
+
+  $failed = @($response.data.failedItems)
+  if ($failed.Count -gt 0) {
+      foreach ($fi in $failed) {
+          Write-Host "Failed: $($fi.email) -> $($fi.error)" -ForegroundColor Red
+      }
+
+      # Treat partial success as an error if desired
+      throw "Bulk user create completed with $($failed.Count) failed item(s)."
+  }
+  ```
+
+  You can also capture the warnings produced by the bulk cmdlets using
+  `-WarningVariable` if you prefer not to throw.
+
 ---
 
 ## 4. Core Usage by Area
