@@ -60,41 +60,63 @@ This makes getting updates significantly easier as well.
    7. Click **Generate token** and **copy the token value** somewhere
       safe. You will not be able to see it again.
 
-2. **Create credentials and register the GitHub Packages feed**
+2. **Add credentials and install the module**
 
-   Run the following in an elevated PowerShell session, replacing the
-   placeholders with your own GitHub username and the PAT from step 1:
+   Save the following to a Powershell script, replacing the
+   placeholders with your own GitHub username and the PAT from step 1.
+   Run the script in an elevated terminal. Nuget is required to install the
+   module, the script will download it automatically if it is missing:
 
-   ```powershell
-   $owner = 'evosecurity'                 # GitHub org that owns the package
-   $user  = '<YOUR_GITHUB_USERNAME>'      # your GitHub username
-   $token = '<PAT_FROM_STEP_1>'           # the PAT with read:packages
+```powershell
+   # --- Config ---
+   $owner       = "evosecurity"
+   $user        = "<YOUR_GITHUB_USERNAME>"
+   $token       = "<PAT_FROM_STEP_1>"
+   $packageName = "EvoPartnerAPICommandlet"
 
-   $secureToken = ConvertTo-SecureString $token -AsPlainText -Force
-   $creds       = New-Object System.Management.Automation.PSCredential($user, $secureToken)
+   # --- Ensure nuget.exe exists ---
+   $nuget = "$env:LOCALAPPDATA\nuget\nuget.exe"
+   if (!(Test-Path $nuget)) {
+       Invoke-WebRequest "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile $nuget
+   }
 
-   # Register NuGet source used under the hood by PowerShellGet
-   Register-PackageSource -Name GitHubPackages `
-     -ProviderName NuGet `
-     -Location "https://nuget.pkg.github.com/$owner/index.json" `
-     -Credential $creds `
-     -Trusted -Force
+   # --- Add GitHub Packages feed ---
+   $sourceExists = (& $nuget sources List) -match "GitHubPackages"
+   if (-not $sourceExists) {
+       & $nuget sources Add `
+           -Name "GitHubPackages" `
+           -Source "https://nuget.pkg.github.com/$owner/index.json" `
+           -UserName $user `
+           -Password $token `
+           -StorePasswordInClearText | Out-Null
+   }
 
-   # Register as a PowerShell repository so Install-Module can use it
-   Register-PSRepository -Name GitHubPackages `
-     -SourceLocation "https://nuget.pkg.github.com/$owner/index.json" `
-     -InstallationPolicy Trusted
-   ```
+   # --- Download package to temp folder ---
+   $temp = Join-Path $env:TEMP "psmodule"
+   Remove-Item $temp -Recurse -Force -ErrorAction Ignore
+   New-Item $temp -ItemType Directory | Out-Null
 
-3. **Install the module from GitHub Packages**
+   & $nuget install $packageName -Source GitHubPackages -OutputDirectory $temp | Out-Null
 
-   ```powershell
-   Install-Module EvoPartnerAPICommandlet -Repository GitHubPackages -Credential $creds
-   ```
+   # --- Find the downloaded folder ---
+   $pkg = Get-ChildItem $temp | Where-Object { $_.Name -like "$($packageName.ToLower())*" }
 
-   You only need to register the source/repository once per machine.
-   After that, `Install-Module` and `Update-Module` work like any other
-   PowerShell repository that you trust.
+   # --- Destination (global) ---
+   $dest = "C:\Program Files\WindowsPowerShell\Modules\$packageName"
+
+   # Remove old version if it exists
+   if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
+
+   # Copy module to destination
+   Copy-Item -Recurse $pkg.FullName $dest
+
+   # --- Import module ---
+   Import-Module $dest -Force
+
+   Write-Host "Module installed and imported from $dest" -ForegroundColor Green
+```
+
+After installing, `Import-Module EvoPartnerAPICommandlet` can be used on the machine at any time to start up the module.
 
 ---
 
