@@ -301,8 +301,20 @@ $newUser = New-EvoUser `
   -IsAdmin $true `
   -DirectoryId 'DIRECTORY_GUID'
 
+# Create user with MFA disabled
+$newUser = New-EvoUser `
+  -Email 'user@example.com' `
+  -FirstName 'Alice' `
+  -LastName 'Admin' `
+  -IsAdmin $true `
+  -DirectoryId 'DIRECTORY_GUID' `
+  -MfaEnabled $false
+
 # Update user
 Set-EvoUser -Id $newUser.id -FirstName 'Alicia'
+
+# Update user MFA setting
+Set-EvoUser -Id $newUser.id -MfaEnabled $true
 
 # Delete user
 Remove-EvoUser -Id $newUser.id -Confirm:$false
@@ -327,7 +339,7 @@ Import-Csv .\users.csv | New-EvoUserBulk
 Where `users.csv` has headers like:
 
 ```text
-Email,FirstName,LastName,IsAdmin,DirectoryId,LicenseIds,RoleGroupIds,SendWelcomeEmail
+Email,FirstName,LastName,IsAdmin,DirectoryId,LicenseIds,RoleGroupIds,SendWelcomeEmail,MfaEnabled
 ```
 
 #### Welcome emails
@@ -369,7 +381,7 @@ Remove-EvoTenant -Id $newTenant.id -Confirm:$false
 ) | New-EvoTenantBulk
 ```
 
-#### Directories
+#### Cloud Directories
 
 ```powershell
 # Create Cloud Directory
@@ -377,6 +389,85 @@ New-EvoDirectory -Name 'Dir-Customer-01' -TenantId $newTenant.id
 
 # List directories
 Get-EvoDirectory -TenantIdList $newTenant.id
+
+# Delete Cloud Directory (async operation)
+$operation = Remove-EvoDirectory -Id 'DIRECTORY_GUID' -Confirm:$false
+
+# Check deletion status
+Get-EvoAsyncOperation -Id $operation.operationId
+```
+
+#### Azure AD Directories
+
+```powershell
+# Initiate Azure AD directory creation flow
+$flow = New-EvoAzureAdDirectory `
+  -EvoTenantId $newTenant.id `
+  -Name 'Contoso Azure AD' `
+  -AzurePrimaryDomainNameOrAzureTenantId 'contoso.onmicrosoft.com' `
+  -AutoEnableMfa `
+  -AutoSendWelcomeEmails
+
+# The $flow.redirectUrl should be opened in a browser to complete OAuth
+
+# List Azure AD directories
+Get-EvoAzureAdDirectory
+
+# Get a specific Azure AD directory
+Get-EvoAzureAdDirectory -Id 'DIRECTORY_GUID'
+
+# Update Azure AD directory settings
+Set-EvoAzureAdDirectory -Id 'DIRECTORY_GUID' -AutoEnableMfa $true
+
+# Delete Azure AD directory (async operation)
+$operation = Remove-EvoAzureAdDirectory -Id 'DIRECTORY_GUID' -Confirm:$false
+Get-EvoAsyncOperation -Id $operation.operationId
+```
+
+#### LDAP Directories
+
+```powershell
+# Create LDAP directory (connection settings are configured via LDAP agent)
+$ldapDir = New-EvoLdapDirectory `
+  -TenantId $newTenant.id `
+  -Name 'Corp LDAP' `
+  -AutoEnableMfa `
+  -AutoSendWelcomeEmails
+
+# List LDAP directories
+Get-EvoLdapDirectory
+
+# Get a specific LDAP directory
+Get-EvoLdapDirectory -Id 'DIRECTORY_GUID'
+
+# Update LDAP directory license assignment settings
+Set-EvoLdapDirectory -Id 'DIRECTORY_GUID' -AutoAssignMfaAndSsoLicenses $true
+
+# Delete LDAP directory (async operation)
+$operation = Remove-EvoLdapDirectory -Id 'DIRECTORY_GUID' -Confirm:$false
+Get-EvoAsyncOperation -Id $operation.operationId
+```
+
+#### Async Operations
+
+Directory deletions are processed asynchronously. Use `Get-EvoAsyncOperation` to track progress:
+
+```powershell
+# Delete a directory and wait for completion
+$operation = Remove-EvoDirectory -Id 'DIRECTORY_GUID' -Confirm:$false
+
+# Poll for completion
+do {
+    Start-Sleep -Seconds 2
+    $status = Get-EvoAsyncOperation -Id $operation.operationId
+    Write-Host "Status: $($status.status)"
+} while ($status.status -eq 'pending')
+
+if ($status.status -eq 'completed') {
+    Write-Host 'Directory deleted successfully'
+} else {
+    Write-Warning "Deletion failed: $($status.errorMessage)"
+}
 ```
 
 ---
@@ -419,8 +510,21 @@ Remove-EvoLicenseAssignment -LicenseId 'LICENSE_GUID' -UserIdList $userIds
 $newGroup = New-EvoGroup -TenantId $newTenant.id -Name 'Helpdesk'
 Add-EvoGroupMember -GroupId $newGroup.id -UserIdList $userIds
 
+# List available roles
+Get-EvoRole
+Get-EvoRole -Query 'Admin' -Category 'Portal'
+
 # List role groups
 Get-EvoRoleGroup -Query 'Help Desk'
+
+# Create a new role group
+$roleGroup = New-EvoRoleGroup -Name 'IT Administrators' -RoleIdList @('role-id-1', 'role-id-2')
+
+# Update a role group
+Set-EvoRoleGroup -Id $roleGroup.id -Name 'Updated Name' -RoleIdList @('role-id-1')
+
+# Delete a role group
+Remove-EvoRoleGroup -Id $roleGroup.id -Confirm:$false
 
 # Assign role groups to a group
 Add-EvoGroupRoleGroup -GroupId $newGroup.id -RoleGroupIdList 'ROLE_GROUP_GUID'
@@ -491,7 +595,57 @@ Get-EvoDomainAccount -Id 'DOMAIN_ACCOUNT_GUID'
 
 ---
 
-### 4.9 Health Check
+### 4.9 Local Admin Accounts
+
+```powershell
+# List all local admin accounts
+Get-EvoLocalAdminAccount
+
+# Get a specific local admin account
+Get-EvoLocalAdminAccount -Id 'ACCOUNT_GUID'
+
+# Filter by tenant and search
+Get-EvoLocalAdminAccount -TenantIdList @('TENANT_GUID') -Query 'admin'
+
+# Filter by computer IDs
+Get-EvoLocalAdminAccount -ComputerIdList @('COMPUTER_GUID')
+
+# Filter by enabled status
+Get-EvoLocalAdminAccount -Enabled $true
+```
+
+#### Password Rotation Configuration
+
+```powershell
+# Create a scheduled password rotation config (rotates every 7 days)
+New-EvoLocalAdminAccountPasswordRotationConfig -LocalAdminAccountId 'ACCOUNT_GUID' -RotationFrequency 7
+
+# Create a disabled config
+New-EvoLocalAdminAccountPasswordRotationConfig -LocalAdminAccountId 'ACCOUNT_GUID' -RotationFrequency 14 -Enabled $false
+
+# Update rotation frequency
+Set-EvoLocalAdminAccountPasswordRotationConfig -LocalAdminAccountId 'ACCOUNT_GUID' -RotationFrequency 14
+
+# Disable password rotation
+Set-EvoLocalAdminAccountPasswordRotationConfig -LocalAdminAccountId 'ACCOUNT_GUID' -Enabled $false
+```
+
+#### Immediate Password Rotation
+
+```powershell
+# Trigger immediate password rotation for one or more accounts
+$rotation = New-EvoLocalAdminAccountPasswordRotation -LocalAdminAccountIdList @('ACCOUNT_GUID_1', 'ACCOUNT_GUID_2')
+
+# Check the rotation status
+Get-EvoLocalAdminAccountPasswordRotation -Id $rotation.operationId
+
+# Or use async operation tracking
+Get-EvoAsyncOperation -Id $rotation.operationId
+```
+
+---
+
+### 4.10 Health Check
 
 ```powershell
 Test-EvoPartnerApiHealth

@@ -23,6 +23,9 @@ function Set-EvoUser {
     .PARAMETER DirectoryId
         Cloud Directory ID to associate with the user.
 
+    .PARAMETER MfaEnabled
+        Whether MFA is enabled for the user.
+
     .EXAMPLE
         Set-EvoUser -Id '00000000-0000-0000-0000-000000000000' -FirstName 'Updated'
 
@@ -44,7 +47,10 @@ function Set-EvoUser {
         [bool]$IsAdmin,
 
         [Parameter(ValueFromPipelineByPropertyName = $true)]
-        [string]$DirectoryId
+        [string]$DirectoryId,
+
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Nullable[bool]]$MfaEnabled
     )
 
     process {
@@ -64,6 +70,10 @@ function Set-EvoUser {
 
         if ($PSBoundParameters.ContainsKey('DirectoryId')) {
             $body['directoryId'] = $DirectoryId
+        }
+
+        if ($PSBoundParameters.ContainsKey('MfaEnabled')) {
+            $body['mfaEnabled'] = $MfaEnabled
         }
 
         if ($body.Count -eq 0) {

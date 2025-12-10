@@ -30,6 +30,9 @@ function New-EvoUser {
     .PARAMETER RoleGroupIdList
         Optional list of role group IDs to assign to the user.
 
+    .PARAMETER MfaEnabled
+        Whether MFA is enabled for the user. Defaults to true if not specified.
+
     .PARAMETER SendWelcomeEmail
         When specified, sends a welcome email to the created user.
 
@@ -62,6 +65,9 @@ function New-EvoUser {
         [string[]]$RoleGroupIdList,
 
         [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Nullable[bool]]$MfaEnabled,
+
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [switch]$SendWelcomeEmail
     )
 
@@ -84,6 +90,10 @@ function New-EvoUser {
 
         if ($RoleGroupIdList) {
             $body['roleGroupIds'] = $RoleGroupIdList
+        }
+
+        if ($PSBoundParameters.ContainsKey('MfaEnabled')) {
+            $body['mfaEnabled'] = $MfaEnabled
         }
 
         if ($PSBoundParameters.ContainsKey('SendWelcomeEmail')) {
