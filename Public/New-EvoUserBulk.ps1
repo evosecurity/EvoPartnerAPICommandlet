@@ -101,6 +101,10 @@ function New-EvoUserBulk {
                 $item['sendWelcomeEmail'] = ConvertTo-EvoBooleanFromCsv -Value $u.SendWelcomeEmail
             }
 
+            if ($u.PSObject.Properties['MfaEnabled']) {
+                $item['mfaEnabled'] = ConvertTo-EvoBooleanFromCsv -Value $u.MfaEnabled
+            }
+
             $usersPayload += $item
         }
 
