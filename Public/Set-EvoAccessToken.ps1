@@ -6,6 +6,9 @@ function Set-EvoAccessToken {
     .DESCRIPTION
         Updates an access token via the /v1/access_tokens/{id} endpoint.
 
+        Note: For LDAP agent tokens, the ExpireAt parameter is ignored as these tokens
+        never expire. You can still update Name and Active for LDAP agent tokens.
+
     .PARAMETER Id
         The ID of the access token to update.
 
@@ -13,7 +16,8 @@ function Set-EvoAccessToken {
         New name for the token.
 
     .PARAMETER ExpireAt
-        New expiration date/time for the token.
+        New expiration date/time for the token. Must be a future date.
+        Ignored for LDAP agent tokens as they never expire.
 
     .PARAMETER Active
         Whether the token is active.

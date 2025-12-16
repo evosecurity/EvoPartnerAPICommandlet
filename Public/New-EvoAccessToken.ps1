@@ -6,6 +6,10 @@ function New-EvoAccessToken {
     .DESCRIPTION
         Creates a new access token via the /v1/access_tokens endpoint.
 
+        Note: LDAP agent tokens (Type = 'ldap_agent') never expire. For these tokens,
+        the ExpireAt parameter is ignored and the token will be created with no expiration.
+        For endpoint_agent tokens, ExpireAt is required and must be a future date.
+
     .PARAMETER Name
         The name of the access token.
 
@@ -14,9 +18,12 @@ function New-EvoAccessToken {
 
     .PARAMETER Type
         The type of the token: endpoint_agent or ldap_agent.
+        - endpoint_agent: Requires ExpireAt parameter (token will expire)
+        - ldap_agent: ExpireAt is ignored (token never expires)
 
     .PARAMETER ExpireAt
-        Optional expiration date/time for the token.
+        Expiration date/time for the token. Required for endpoint_agent tokens.
+        Ignored for ldap_agent tokens as they never expire.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
