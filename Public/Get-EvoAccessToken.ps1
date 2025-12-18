@@ -8,6 +8,10 @@ function Get-EvoAccessToken {
         /v1/access_tokens/{id} endpoints. Supports filtering when
         listing tokens.
 
+        Note: LDAP agent tokens never expire (expireAt is null). When filtering
+        with Expired = 'false', both non-expired tokens and LDAP agent tokens
+        (which never expire) are returned.
+
     .PARAMETER Id
         The ID of the access token to retrieve.
 
@@ -25,6 +29,8 @@ function Get-EvoAccessToken {
 
     .PARAMETER Expired
         Optional filter for expiration status: 'true' or 'false'.
+        - 'true': Returns only expired tokens (excludes LDAP agent tokens which never expire)
+        - 'false': Returns non-expired tokens AND LDAP agent tokens (which never expire)
 
     .PARAMETER TenantIdList
         Optional list of tenant IDs to filter tokens by.
