@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EvoPartnerAPICommandlet.psm1'
-    ModuleVersion     = '0.1.0'
+    ModuleVersion     = '0.2.0'
     GUID              = '11111111-2222-3333-4444-555555555555'
     Author            = 'Evo Security'
     CompanyName       = 'Evo Security'
