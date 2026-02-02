@@ -36,10 +36,19 @@ function New-EvoUser {
     .PARAMETER SendWelcomeEmail
         When specified, sends a welcome email to the created user.
 
+    .PARAMETER WelcomeEmailAlternate
+        Optional alternate email address to send the welcome email to instead
+        of the user's primary email. Only used when SendWelcomeEmail is true.
+
     .EXAMPLE
         New-EvoUser -Email 'user@example.com' -FirstName 'Test' -LastName 'User' -IsAdmin $true -DirectoryId '00000000-0000-0000-0000-000000000000'
 
         Creates a new admin user in the specified Cloud Directory.
+
+    .EXAMPLE
+        New-EvoUser -Email 'user@example.com' -FirstName 'Test' -LastName 'User' -IsAdmin $true -DirectoryId '00000000-0000-0000-0000-000000000000' -SendWelcomeEmail -WelcomeEmailAlternate 'alternate@example.com'
+
+        Creates a new admin user and sends welcome email to an alternate address.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
@@ -68,7 +77,10 @@ function New-EvoUser {
         [Nullable[bool]]$MfaEnabled,
 
         [Parameter(ValueFromPipelineByPropertyName = $true)]
-        [switch]$SendWelcomeEmail
+        [switch]$SendWelcomeEmail,
+
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [string]$WelcomeEmailAlternate
     )
 
     process {
@@ -98,6 +110,10 @@ function New-EvoUser {
 
         if ($PSBoundParameters.ContainsKey('SendWelcomeEmail')) {
             $body['sendWelcomeEmail'] = [bool]$SendWelcomeEmail
+        }
+
+        if ($PSBoundParameters.ContainsKey('WelcomeEmailAlternate') -and -not [string]::IsNullOrWhiteSpace($WelcomeEmailAlternate)) {
+            $body['welcomeEmailAlternate'] = $WelcomeEmailAlternate
         }
 
         $response = Invoke-EvoApiRequest -Method 'POST' -Path '/v1/users' -Body $body

@@ -30,6 +30,10 @@ function Get-EvoDomainAccount {
 
     .PARAMETER TenantIdList
         Optional list of tenant IDs to filter accounts by.
+
+    .PARAMETER All
+        When specified, automatically pages through all available
+        result pages and streams domain accounts to the pipeline.
     #>
     [CmdletBinding(DefaultParameterSetName = 'List')]
     param(
@@ -59,7 +63,10 @@ function Get-EvoDomainAccount {
         [string[]]$DirectoryIdList,
 
         [Parameter(ParameterSetName = 'List')]
-        [string[]]$TenantIdList
+        [string[]]$TenantIdList,
+
+        [Parameter(ParameterSetName = 'List')]
+        [switch]$All
     )
 
     process {
@@ -85,43 +92,52 @@ function Get-EvoDomainAccount {
             throw 'Limit must be greater than zero.'
         }
 
-        $queryParams = @{
-            page  = $currentPage
-            limit = $pageSize
-        }
+        do {
+            $queryParams = @{
+                page  = $currentPage
+                limit = $pageSize
+            }
 
-        if ($PSBoundParameters.ContainsKey('Query') -and $Query) {
-            $queryParams['q'] = $Query
-        }
+            if ($PSBoundParameters.ContainsKey('Query') -and $Query) {
+                $queryParams['q'] = $Query
+            }
 
-        if ($PSBoundParameters.ContainsKey('Active') -and $Active) {
-            $queryParams['active'] = $Active
-        }
+            if ($PSBoundParameters.ContainsKey('Active') -and $Active) {
+                $queryParams['active'] = $Active
+            }
 
-        if ($PSBoundParameters.ContainsKey('Type') -and $Type) {
-            $queryParams['type'] = $Type
-        }
+            if ($PSBoundParameters.ContainsKey('Type') -and $Type) {
+                $queryParams['type'] = $Type
+            }
 
-        if ($DirectoryIdList) {
-            $queryParams['directoryIds[]'] = $DirectoryIdList
-        }
+            if ($DirectoryIdList) {
+                $queryParams['directoryIds[]'] = $DirectoryIdList
+            }
 
-        if ($TenantIdList) {
-            $queryParams['tenantIds[]'] = $TenantIdList
-        }
+            if ($TenantIdList) {
+                $queryParams['tenantIds[]'] = $TenantIdList
+            }
 
-        $response = Invoke-EvoApiRequest -Method 'GET' -Path '/v1/domain_accounts' -Query $queryParams
+            $response = Invoke-EvoApiRequest -Method 'GET' -Path '/v1/domain_accounts' -Query $queryParams
 
-        if ($null -ne $response -and $response.PSObject.Properties['data']) {
-            foreach ($account in $response.data) {
-                if ($account -is [pscustomobject]) {
-                    $account.PSObject.TypeNames.Insert(0, 'Evo.DomainAccount')
+            if ($null -ne $response -and $response.PSObject.Properties['data']) {
+                foreach ($account in $response.data) {
+                    if ($account -is [pscustomobject]) {
+                        $account.PSObject.TypeNames.Insert(0, 'Evo.DomainAccount')
+                    }
+                    Write-Output $account
                 }
-                Write-Output $account
+            }
+
+            $hasMore = $false
+            if ($All.IsPresent -and $response -and $response.PSObject.Properties['pagination']) {
+                $pagination = $response.pagination
+                if ($pagination -and $pagination.page -lt $pagination.totalPages) {
+                    $currentPage = [int]$pagination.page + 1
+                    $hasMore = $true
+                }
             }
         }
-        else {
-            Write-Output $response
-        }
+        while ($hasMore)
     }
 }

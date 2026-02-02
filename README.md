@@ -310,6 +310,16 @@ $newUser = New-EvoUser `
   -DirectoryId 'DIRECTORY_GUID' `
   -MfaEnabled $false
 
+# Create user and send welcome email to alternate address
+$newUser = New-EvoUser `
+  -Email 'user@example.com' `
+  -FirstName 'Alice' `
+  -LastName 'Admin' `
+  -IsAdmin $true `
+  -DirectoryId 'DIRECTORY_GUID' `
+  -SendWelcomeEmail `
+  -WelcomeEmailAlternate 'manager@example.com'
+
 # Update user
 Set-EvoUser -Id $newUser.id -FirstName 'Alicia'
 
@@ -339,14 +349,23 @@ Import-Csv .\users.csv | New-EvoUserBulk
 Where `users.csv` has headers like:
 
 ```text
-Email,FirstName,LastName,IsAdmin,DirectoryId,LicenseIds,RoleGroupIds,SendWelcomeEmail,MfaEnabled
+Email,FirstName,LastName,IsAdmin,DirectoryId,LicenseIds,RoleGroupIds,SendWelcomeEmail,MfaEnabled,WelcomeEmailAlternate
 ```
 
 #### Welcome emails
 
 ```powershell
-Get-EvoUser -Query 'newuser' | Select-Object -ExpandProperty id | `
-  Send-EvoUserWelcomeEmail
+# Send welcome emails to users (using their primary email)
+Get-EvoUser -Query 'newuser' | Send-EvoUserWelcomeEmail
+
+# Send welcome email to alternate email address
+Send-EvoUserWelcomeEmail -UserId 'USER_GUID' -WelcomeEmailAlternate 'alternate@example.com'
+
+# Bulk send with mixed alternate emails
+@(
+    @{ UserId = 'user-id-1'; WelcomeEmailAlternate = 'alt1@example.com' },
+    @{ UserId = 'user-id-2' }
+) | Send-EvoUserWelcomeEmail
 ```
 
 ---
@@ -591,11 +610,110 @@ Get-EvoDomainAccount -Type manual -Active 'true'
 
 # Get a specific domain account
 Get-EvoDomainAccount -Id 'DOMAIN_ACCOUNT_GUID'
+
+# Create manual domain account
+New-EvoDomainAccountManual -Username 'admin' -Password 'SecurePass123!' -TenantId 'TENANT_GUID'
+
+# Create synced domain account from user
+New-EvoDomainAccountSynced -UserId 'USER_GUID' -Interval 30
+
+# Update manual domain account password
+Set-EvoDomainAccountManual -Id 'ACCOUNT_GUID' -Password 'NewPassword123!'
+
+# Update synced domain account interval
+Set-EvoDomainAccountSynced -Id 'ACCOUNT_GUID' -Interval 60
+
+# Delete domain account
+Remove-EvoDomainAccount -Id 'ACCOUNT_GUID'
+
+# Bulk update status (enable/disable)
+Get-EvoDomainAccount -Type manual | Set-EvoDomainAccountStatusBulk -Active $false
+
+# Bulk delete domain accounts
+Remove-EvoDomainAccountBulk -DomainAccountIdList @('ID1', 'ID2')
 ```
 
 ---
 
-### 4.9 Local Admin Accounts
+### 4.9 Computers (Endpoints)
+
+```powershell
+# List all computers
+Get-EvoComputer -All
+
+# Get a specific computer
+Get-EvoComputer -Id 'COMPUTER_GUID'
+
+# Filter by operating system
+Get-EvoComputer -Os windows -All
+
+# Filter by tenant
+Get-EvoComputer -TenantIdList @('TENANT_GUID') -All
+
+# Search computers by name
+Get-EvoComputer -Query 'laptop' -All
+
+# Delete a computer
+Remove-EvoComputer -Id 'COMPUTER_GUID'
+
+# Bulk delete computers
+Get-EvoComputer -Os macos | Remove-EvoComputerBulk
+```
+
+---
+
+### 4.10 Help Desk Verification (HDV)
+
+```powershell
+# Check available HDV methods for a user
+Get-EvoUserHdvMethods -UserId 'USER_GUID'
+
+# List all HDV requests
+Get-EvoHelpDeskVerification -All
+
+# List pending HDV requests
+Get-EvoHelpDeskVerification -Status pending
+
+# List HDV requests by method
+Get-EvoHelpDeskVerification -Method email -All
+
+# List HDV requests for specific users
+Get-EvoHelpDeskVerification -UserIdList 'USER_GUID_1', 'USER_GUID_2'
+
+# Create HDV request (mobile app verification)
+$hdv = New-EvoHelpDeskVerification -UserId 'USER_GUID' -Method mobile -RequesterId 'REQUESTER_USER_GUID'
+
+# Create HDV request with PSA ticket tracking
+$hdv = New-EvoHelpDeskVerification -UserId 'USER_GUID' -Method email -RequesterId 'REQUESTER_USER_GUID' -PsaTicketExternalId 'CW-12345'
+
+# Get HDV status
+Get-EvoHelpDeskVerification -Id $hdv.operationId
+
+# Verify email HDV with code
+Confirm-EvoHelpDeskVerificationEmail -Id 'HDV_GUID' -Code '123456'
+
+# Verify SMS HDV with code
+Confirm-EvoHelpDeskVerificationSms -Id 'HDV_GUID' -Code '654321'
+```
+
+---
+
+### 4.11 Directory Users
+
+```powershell
+# List all users in a directory
+Get-EvoDirectoryUser -DirectoryId 'DIRECTORY_GUID' -All
+
+# Filter by user type
+Get-EvoDirectoryUser -DirectoryId 'DIRECTORY_GUID' -Type synced
+
+# Search users in directory
+Get-EvoDirectoryUser -DirectoryId 'DIRECTORY_GUID' -Query 'john'
+```
+
+---
+
+### 4.12 Local Admin Accounts
 
 ```powershell
 # List all local admin accounts

@@ -11,7 +11,7 @@ function Set-EvoLocalAdminAccountPasswordRotationConfig {
         The ID of the local admin account.
 
     .PARAMETER RotationFrequency
-        Rotation frequency in days (1-24).
+        Rotation frequency in days (1-365).
 
     .PARAMETER Enabled
         Whether password rotation is enabled.
@@ -33,7 +33,7 @@ function Set-EvoLocalAdminAccountPasswordRotationConfig {
         [string]$LocalAdminAccountId,
 
         [Parameter(ValueFromPipelineByPropertyName = $true)]
-        [ValidateRange(1, 24)]
+        [ValidateRange(1, 365)]
         [Nullable[int]]$RotationFrequency,
 
         [Parameter(ValueFromPipelineByPropertyName = $true)]
