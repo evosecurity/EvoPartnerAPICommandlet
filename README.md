@@ -612,25 +612,33 @@ Get-EvoDomainAccount -Type manual -Active 'true'
 Get-EvoDomainAccount -Id 'DOMAIN_ACCOUNT_GUID'
 
 # Create manual domain account
-New-EvoDomainAccountManual -Username 'admin' -Password 'SecurePass123!' -TenantId 'TENANT_GUID'
+$result = New-EvoDomainAccountManual -Username 'admin' -Password 'SecurePass123!' -TenantId 'TENANT_GUID'
+$operation = Get-EvoAsyncOperation -Id $result.operationId
+$accountId = $operation.result.domainAccountId
 
 # Create synced domain account from user
-New-EvoDomainAccountSynced -UserId 'USER_GUID' -Interval 30
+$result = New-EvoDomainAccountSynced -UserId 'USER_GUID' -Interval 30
+$operation = Get-EvoAsyncOperation -Id $result.operationId
+$accountId = $operation.result.domainAccountId
 
 # Update manual domain account password
-Set-EvoDomainAccountManual -Id 'ACCOUNT_GUID' -Password 'NewPassword123!'
+$result = Set-EvoDomainAccountManual -Id 'ACCOUNT_GUID' -Password 'NewPassword123!'
+Get-EvoAsyncOperation -Id $result.operationId
 
 # Update synced domain account interval
-Set-EvoDomainAccountSynced -Id 'ACCOUNT_GUID' -Interval 60
+$result = Set-EvoDomainAccountSynced -Id 'ACCOUNT_GUID' -Interval 60
+Get-EvoAsyncOperation -Id $result.operationId
 
 # Delete domain account
-Remove-EvoDomainAccount -Id 'ACCOUNT_GUID'
+$result = Remove-EvoDomainAccount -Id 'ACCOUNT_GUID'
+Get-EvoAsyncOperation -Id $result.operationId
 
 # Bulk update status (enable/disable)
 Get-EvoDomainAccount -Type manual | Set-EvoDomainAccountStatusBulk -Active $false
 
 # Bulk delete domain accounts
-Remove-EvoDomainAccountBulk -DomainAccountIdList @('ID1', 'ID2')
+$result = Remove-EvoDomainAccountBulk -DomainAccountIdList @('ID1', 'ID2')
+Get-EvoAsyncOperation -Id $result.operationId
 ```
 
 ---
@@ -654,10 +662,12 @@ Get-EvoComputer -TenantIdList @('TENANT_GUID') -All
 Get-EvoComputer -Query 'laptop' -All
 
 # Delete a computer
-Remove-EvoComputer -Id 'COMPUTER_GUID'
+$result = Remove-EvoComputer -Id 'COMPUTER_GUID'
+Get-EvoAsyncOperation -Id $result.operationId
 
 # Bulk delete computers
-Get-EvoComputer -Os macos | Remove-EvoComputerBulk
+$result = Get-EvoComputer -Os macos | Remove-EvoComputerBulk
+Get-EvoAsyncOperation -Id $result.operationId
 ```
 
 ---
@@ -686,8 +696,12 @@ $hdv = New-EvoHelpDeskVerification -UserId 'USER_GUID' -Method mobile -Requester
 # Create HDV request with PSA ticket tracking
 $hdv = New-EvoHelpDeskVerification -UserId 'USER_GUID' -Method email -RequesterId 'REQUESTER_USER_GUID' -PsaTicketExternalId 'CW-12345'
 
-# Get HDV status
-Get-EvoHelpDeskVerification -Id $hdv.operationId
+# Check async operation status
+$operation = Get-EvoAsyncOperation -Id $hdv.operationId
+$hdvId = $operation.result.helpDeskVerificationId
+
+# Get HDV request details once operation completes
+Get-EvoHelpDeskVerification -Id $hdvId
 
 # Verify email HDV with code
 Confirm-EvoHelpDeskVerificationEmail -Id 'HDV_GUID' -Code '123456'
@@ -754,11 +768,12 @@ Set-EvoLocalAdminAccountPasswordRotationConfig -LocalAdminAccountId 'ACCOUNT_GUI
 # Trigger immediate password rotation for one or more accounts
 $rotation = New-EvoLocalAdminAccountPasswordRotation -LocalAdminAccountIdList @('ACCOUNT_GUID_1', 'ACCOUNT_GUID_2')
 
-# Check the rotation status
-Get-EvoLocalAdminAccountPasswordRotation -Id $rotation.operationId
+# Check async operation status
+$operation = Get-EvoAsyncOperation -Id $rotation.operationId
+$rotations = $operation.result.passwordRotations
 
-# Or use async operation tracking
-Get-EvoAsyncOperation -Id $rotation.operationId
+# Get details of a specific password rotation
+Get-EvoLocalAdminAccountPasswordRotation -Id $rotations[0].id
 ```
 
 ---

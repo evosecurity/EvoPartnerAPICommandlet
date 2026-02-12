@@ -25,6 +25,13 @@ function Set-EvoDomainAccountSynced {
         Set-EvoDomainAccountSynced -Id 'account-id' -Active $false
 
         Disables a synced domain account.
+
+    .EXAMPLE
+        $result = Set-EvoDomainAccountSynced -Id 'account-id' -Interval 60
+        Get-EvoAsyncOperation -Id $result.operationId
+
+        Updates a synced domain account's password rotation interval and uses the operationId
+        to check the async operation status via the /v1/async_operations/{id} endpoint.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
@@ -60,6 +67,12 @@ function Set-EvoDomainAccountSynced {
 
         $path = "/v1/domain_accounts/$Id/synced"
         $response = Invoke-EvoApiRequest -Method 'PUT' -Path $path -Body $body
-        Write-Output $response
+        
+        if ($null -ne $response -and $response.PSObject.Properties['data']) {
+            Write-Output $response.data
+        }
+        else {
+            Write-Output $response
+        }
     }
 }

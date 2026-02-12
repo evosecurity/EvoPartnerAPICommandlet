@@ -19,6 +19,13 @@ function Remove-EvoDomainAccount {
         Get-EvoDomainAccount -Type manual | Remove-EvoDomainAccount
 
         Deletes all manual domain accounts.
+
+    .EXAMPLE
+        $result = Remove-EvoDomainAccount -Id 'account-id'
+        Get-EvoAsyncOperation -Id $result.operationId
+
+        Deletes a domain account and uses the operationId to check the async operation
+        status via the /v1/async_operations/{id} endpoint.
     #>
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     param(
@@ -34,6 +41,12 @@ function Remove-EvoDomainAccount {
 
         $path = "/v1/domain_accounts/$Id"
         $response = Invoke-EvoApiRequest -Method 'DELETE' -Path $path
-        Write-Output $response
+        
+        if ($null -ne $response -and $response.PSObject.Properties['data']) {
+            Write-Output $response.data
+        }
+        else {
+            Write-Output $response
+        }
     }
 }

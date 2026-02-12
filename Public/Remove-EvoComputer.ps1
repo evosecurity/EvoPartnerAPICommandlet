@@ -19,6 +19,13 @@ function Remove-EvoComputer {
         Get-EvoComputer -Query 'old-pc' | Remove-EvoComputer
 
         Deletes all computers matching the query.
+
+    .EXAMPLE
+        $result = Remove-EvoComputer -Id '00000000-0000-0000-0000-000000000000'
+        Get-EvoAsyncOperation -Id $result.operationId
+
+        Deletes a computer and uses the operationId to check the async operation
+        status via the /v1/async_operations/{id} endpoint.
     #>
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     param(
@@ -34,6 +41,12 @@ function Remove-EvoComputer {
 
         $path = "/v1/computers/$Id"
         $response = Invoke-EvoApiRequest -Method 'DELETE' -Path $path
-        Write-Output $response
+        
+        if ($null -ne $response -and $response.PSObject.Properties['data']) {
+            Write-Output $response.data
+        }
+        else {
+            Write-Output $response
+        }
     }
 }

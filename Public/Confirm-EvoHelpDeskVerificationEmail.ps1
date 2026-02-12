@@ -38,6 +38,12 @@ function Confirm-EvoHelpDeskVerificationEmail {
 
         $path = "/v1/help_desk_verifications/email/$Id/verify"
         $response = Invoke-EvoApiRequest -Method 'PATCH' -Path $path -Body $body
-        Write-Output $response
+        
+        if ($null -ne $response -and $response.PSObject.Properties['data']) {
+            Write-Output $response.data
+        }
+        else {
+            Write-Output $response
+        }
     }
 }

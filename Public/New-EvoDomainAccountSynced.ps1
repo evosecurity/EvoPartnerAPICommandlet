@@ -25,6 +25,15 @@ function New-EvoDomainAccountSynced {
         New-EvoDomainAccountSynced -UserId 'user-id' -Interval 30
 
         Creates a new synced domain account with 30-day password rotation.
+
+    .EXAMPLE
+        $result = New-EvoDomainAccountSynced -UserId 'user-id'
+        $operation = Get-EvoAsyncOperation -Id $result.operationId
+        $domainAccountId = $operation.result.domainAccountId
+
+        Creates a synced domain account and uses the operationId to get the async operation
+        details via the /v1/async_operations/{id} endpoint. Once the operation completes,
+        the result contains the domain account ID.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
@@ -54,6 +63,12 @@ function New-EvoDomainAccountSynced {
         }
 
         $response = Invoke-EvoApiRequest -Method 'POST' -Path '/v1/domain_accounts/synced' -Body $body
-        Write-Output $response
+        
+        if ($null -ne $response -and $response.PSObject.Properties['data']) {
+            Write-Output $response.data
+        }
+        else {
+            Write-Output $response
+        }
     }
 }

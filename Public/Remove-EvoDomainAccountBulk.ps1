@@ -4,7 +4,7 @@ function Remove-EvoDomainAccountBulk {
         Bulk delete domain accounts.
 
     .DESCRIPTION
-        Deletes multiple domain accounts via the /v1/domain_accounts/bulk-delete endpoint.
+        Deletes multiple domain accounts via the /v1/domain_accounts/bulk endpoint.
         This operation is asynchronous and returns operation details.
 
     .PARAMETER DomainAccountIdList
@@ -19,6 +19,13 @@ function Remove-EvoDomainAccountBulk {
         Get-EvoDomainAccount -Type manual -Active false | Remove-EvoDomainAccountBulk
 
         Deletes all inactive manual domain accounts.
+
+    .EXAMPLE
+        $result = Remove-EvoDomainAccountBulk -DomainAccountIdList 'id1', 'id2', 'id3'
+        Get-EvoAsyncOperation -Id $result.operationId
+
+        Bulk deletes domain accounts and uses the operationId to check the async operation
+        status via the /v1/async_operations/{id} endpoint.
     #>
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     param(
@@ -52,7 +59,13 @@ function Remove-EvoDomainAccountBulk {
             domainAccountIds = $buffer.ToArray()
         }
 
-        $response = Invoke-EvoApiRequest -Method 'POST' -Path '/v1/domain_accounts/bulk-delete' -Body $body
-        Write-Output $response
+        $response = Invoke-EvoApiRequest -Method 'DELETE' -Path '/v1/domain_accounts/bulk' -Body $body
+        
+        if ($null -ne $response -and $response.PSObject.Properties['data']) {
+            Write-Output $response.data
+        }
+        else {
+            Write-Output $response
+        }
     }
 }

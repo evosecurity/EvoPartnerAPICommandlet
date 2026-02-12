@@ -22,6 +22,13 @@ function Set-EvoDomainAccountStatusBulk {
         Get-EvoDomainAccount -Type manual | Set-EvoDomainAccountStatusBulk -Active $true
 
         Enables all manual domain accounts.
+
+    .EXAMPLE
+        $result = Set-EvoDomainAccountStatusBulk -DomainAccountIdList 'id1', 'id2' -Active $false
+        Get-EvoAsyncOperation -Id $result.operationId
+
+        Bulk disables domain accounts and uses the operationId to check the async operation
+        status via the /v1/async_operations/{id} endpoint.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
@@ -61,6 +68,12 @@ function Set-EvoDomainAccountStatusBulk {
         }
 
         $response = Invoke-EvoApiRequest -Method 'PUT' -Path '/v1/domain_accounts/bulk/status' -Body $body
-        Write-Output $response
+        
+        if ($null -ne $response -and $response.PSObject.Properties['data']) {
+            Write-Output $response.data
+        }
+        else {
+            Write-Output $response
+        }
     }
 }

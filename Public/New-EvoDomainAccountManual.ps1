@@ -31,6 +31,15 @@ function New-EvoDomainAccountManual {
         New-EvoDomainAccountManual -Username 'admin' -Password 'SecurePass123!' -TenantId 'tenant-id' -Domain 'contoso.com'
 
         Creates a new manual domain account with a specific domain.
+
+    .EXAMPLE
+        $result = New-EvoDomainAccountManual -Username 'admin' -Password 'SecurePass123!' -TenantId 'tenant-id'
+        $operation = Get-EvoAsyncOperation -Id $result.operationId
+        $domainAccountId = $operation.result.domainAccountId
+
+        Creates a manual domain account and uses the operationId to get the async operation
+        details via the /v1/async_operations/{id} endpoint. Once the operation completes,
+        the result contains the domain account ID.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
@@ -67,6 +76,12 @@ function New-EvoDomainAccountManual {
         }
 
         $response = Invoke-EvoApiRequest -Method 'POST' -Path '/v1/domain_accounts/manual' -Body $body
-        Write-Output $response
+        
+        if ($null -ne $response -and $response.PSObject.Properties['data']) {
+            Write-Output $response.data
+        }
+        else {
+            Write-Output $response
+        }
     }
 }

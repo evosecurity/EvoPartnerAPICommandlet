@@ -55,7 +55,7 @@ function Get-EvoHelpDeskVerification {
     [CmdletBinding(DefaultParameterSetName = 'List')]
     param(
         [Parameter(ParameterSetName = 'ById', Mandatory = $true, Position = 0, ValueFromPipelineByPropertyName = $true)]
-        [Alias('HdvId', 'OperationId')]
+        [Alias('HdvId')]
         [string]$Id,
 
         [Parameter(ParameterSetName = 'List')]

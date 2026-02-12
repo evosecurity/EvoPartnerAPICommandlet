@@ -4,7 +4,7 @@ function Remove-EvoComputerBulk {
         Bulk delete computers (endpoints) from the environment.
 
     .DESCRIPTION
-        Deletes multiple computers via the /v1/computers/bulk-delete endpoint.
+        Deletes multiple computers via the /v1/computers/bulk endpoint.
         This operation is asynchronous and returns operation details.
 
     .PARAMETER ComputerIdList
@@ -19,6 +19,13 @@ function Remove-EvoComputerBulk {
         Get-EvoComputer -Os windows | Select-Object -First 10 | Remove-EvoComputerBulk
 
         Deletes the first 10 Windows computers.
+
+    .EXAMPLE
+        $result = Remove-EvoComputerBulk -ComputerIdList 'id1', 'id2', 'id3'
+        Get-EvoAsyncOperation -Id $result.operationId
+
+        Bulk deletes computers and uses the operationId to check the async operation
+        status via the /v1/async_operations/{id} endpoint.
     #>
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     param(
@@ -52,7 +59,13 @@ function Remove-EvoComputerBulk {
             computerIds = $buffer.ToArray()
         }
 
-        $response = Invoke-EvoApiRequest -Method 'POST' -Path '/v1/computers/bulk-delete' -Body $body
-        Write-Output $response
+        $response = Invoke-EvoApiRequest -Method 'DELETE' -Path '/v1/computers/bulk' -Body $body
+        
+        if ($null -ne $response -and $response.PSObject.Properties['data']) {
+            Write-Output $response.data
+        }
+        else {
+            Write-Output $response
+        }
     }
 }
