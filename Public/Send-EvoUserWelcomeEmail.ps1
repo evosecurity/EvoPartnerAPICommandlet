@@ -5,27 +5,59 @@ function Send-EvoUserWelcomeEmail {
 
     .DESCRIPTION
         Queues welcome emails for users via the /v1/users/welcome_emails
-        endpoint. Accepts user IDs from the pipeline and sends them as
-        the userIds array required by the API.
+        endpoint. Accepts user objects or IDs from the pipeline and sends
+        them as the users array required by the API.
 
-    .PARAMETER UserIdList
-        One or more user IDs to send welcome emails to.
+    .PARAMETER UserId
+        User ID to send welcome email to.
+
+    .PARAMETER WelcomeEmailAlternate
+        Optional alternate email address to send the welcome email to instead
+        of the user's primary email.
+
+    .EXAMPLE
+        Send-EvoUserWelcomeEmail -UserId 'user-id'
+
+        Sends a welcome email to the user's primary email.
+
+    .EXAMPLE
+        Send-EvoUserWelcomeEmail -UserId 'user-id' -WelcomeEmailAlternate 'alternate@example.com'
+
+        Sends a welcome email to an alternate email address.
+
+    .EXAMPLE
+        @(
+            @{ UserId = 'user-id-1'; WelcomeEmailAlternate = 'alt1@example.com' },
+            @{ UserId = 'user-id-2' }
+        ) | Send-EvoUserWelcomeEmail
+
+        Sends welcome emails to multiple users with optional alternate emails.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-        [string[]]$UserIdList
+        [Alias('Id')]
+        [string]$UserId,
+
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [string]$WelcomeEmailAlternate
     )
 
     begin {
-        $buffer = New-Object System.Collections.Generic.List[string]
+        $buffer = New-Object System.Collections.Generic.List[object]
     }
 
     process {
-        foreach ($id in $UserIdList) {
-            if (-not [string]::IsNullOrWhiteSpace($id)) {
-                $buffer.Add($id)
+        if (-not [string]::IsNullOrWhiteSpace($UserId)) {
+            $userObj = @{
+                userId = $UserId
             }
+
+            if (-not [string]::IsNullOrWhiteSpace($WelcomeEmailAlternate)) {
+                $userObj['welcomeEmailAlternate'] = $WelcomeEmailAlternate
+            }
+
+            $buffer.Add($userObj)
         }
     }
 
@@ -39,7 +71,7 @@ function Send-EvoUserWelcomeEmail {
         }
 
         $body = @{
-            userIds = $buffer.ToArray()
+            users = $buffer.ToArray()
         }
 
         $response = Invoke-EvoApiRequest -Method 'POST' -Path '/v1/users/welcome_emails' -Body $body

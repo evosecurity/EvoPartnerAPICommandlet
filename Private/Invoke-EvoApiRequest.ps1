@@ -10,7 +10,7 @@ function Invoke-EvoApiRequest {
         that callers can use try/catch.
 
     .PARAMETER Method
-        HTTP method to use (GET, POST, PUT, DELETE).
+        HTTP method to use (GET, POST, PUT, PATCH, DELETE).
 
     .PARAMETER Path
         Relative API path, e.g. '/v1/users'.
@@ -37,7 +37,7 @@ function Invoke-EvoApiRequest {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('GET','POST','PUT','DELETE')]
+        [ValidateSet('GET','POST','PUT','PATCH','DELETE')]
         [string]$Method,
 
         [Parameter(Mandatory)]

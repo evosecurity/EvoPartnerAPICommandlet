@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EvoPartnerAPICommandlet.psm1'
-    ModuleVersion     = '0.2.0'
+    ModuleVersion     = '0.3.0'
     GUID              = '11111111-2222-3333-4444-555555555555'
     Author            = 'Evo Security'
     CompanyName       = 'Evo Security'
@@ -20,7 +20,7 @@
             Tags        = @('Evo','Partner','API')
             ProjectUri  = 'https://evosecurity.com'
             LicenseUri  = 'https://evosecurity.com'
-            ReleaseNotes = 'Initial development version.'
+            ReleaseNotes = 'Added Computer/Endpoint management, Help Desk Verification, enhanced Domain Account management, Directory users, and updated User welcome email cmdlets.'
         }
     }
 }

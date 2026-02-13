@@ -14,12 +14,20 @@ function New-EvoUserBulk {
         One or more user definition objects. Each object should contain
         at least Email, FirstName, LastName, IsAdmin, and DirectoryId
         properties. Optional properties include RoleGroupIds,
-        LicenseIds, and SendWelcomeEmail.
+        LicenseIds, SendWelcomeEmail, MfaEnabled, and WelcomeEmailAlternate.
 
     .EXAMPLE
         Import-Csv users.csv | New-EvoUserBulk
 
         Creates users based on the data in users.csv.
+
+    .EXAMPLE
+        @(
+            [pscustomobject]@{ Email='user1@example.com'; FirstName='John'; LastName='Doe'; IsAdmin=$false; DirectoryId='DIR_GUID'; SendWelcomeEmail=$true; WelcomeEmailAlternate='alt1@example.com' },
+            [pscustomobject]@{ Email='user2@example.com'; FirstName='Jane'; LastName='Smith'; IsAdmin=$false; DirectoryId='DIR_GUID'; SendWelcomeEmail=$true }
+        ) | New-EvoUserBulk
+
+        Creates users with optional alternate welcome email addresses.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
@@ -103,6 +111,10 @@ function New-EvoUserBulk {
 
             if ($u.PSObject.Properties['MfaEnabled']) {
                 $item['mfaEnabled'] = ConvertTo-EvoBooleanFromCsv -Value $u.MfaEnabled
+            }
+
+            if ($u.PSObject.Properties['WelcomeEmailAlternate'] -and -not [string]::IsNullOrWhiteSpace($u.WelcomeEmailAlternate)) {
+                $item['welcomeEmailAlternate'] = $u.WelcomeEmailAlternate
             }
 
             $usersPayload += $item
