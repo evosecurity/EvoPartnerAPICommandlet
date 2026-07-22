@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EvoPartnerAPICommandlet.psm1'
-    ModuleVersion     = '0.3.0'
+    ModuleVersion     = '0.4.0'
     GUID              = '11111111-2222-3333-4444-555555555555'
     Author            = 'Evo Security'
     CompanyName       = 'Evo Security'
@@ -20,7 +20,7 @@
             Tags        = @('Evo','Partner','API')
             ProjectUri  = 'https://evosecurity.com'
             LicenseUri  = 'https://evosecurity.com'
-            ReleaseNotes = 'Added Computer/Endpoint management, Help Desk Verification, enhanced Domain Account management, Directory users, and updated User welcome email cmdlets.'
+            ReleaseNotes = 'Added webhook registration cmdlets (New/Get/Set/Remove-EvoWebhook), reverse HDV support (linkBased/reverseCode docs), and aligned HDV status filters with Partner API (pending, verified, denied, failed, expired).'
         }
     }
 }
