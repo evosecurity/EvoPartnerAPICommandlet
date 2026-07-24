@@ -665,8 +665,16 @@ Get-EvoComputer -Query 'laptop' -All
 $result = Remove-EvoComputer -Id 'COMPUTER_GUID'
 Get-EvoAsyncOperation -Id $result.operationId
 
+# Delete a computer and remove software if RMM-managed
+$result = Remove-EvoComputer -Id 'COMPUTER_GUID' -RemoveSoftware
+Get-EvoAsyncOperation -Id $result.operationId
+
 # Bulk delete computers
 $result = Get-EvoComputer -Os macos | Remove-EvoComputerBulk
+Get-EvoAsyncOperation -Id $result.operationId
+
+# Bulk delete and remove software if RMM-managed
+$result = Remove-EvoComputerBulk -ComputerIdList 'id1','id2' -RemoveSoftware
 Get-EvoAsyncOperation -Id $result.operationId
 ```
 

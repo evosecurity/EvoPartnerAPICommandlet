@@ -7,13 +7,26 @@ function Remove-EvoComputerBulk {
         Deletes multiple computers via the /v1/computers/bulk endpoint.
         This operation is asynchronous and returns operation details.
 
+        When -RemoveSoftware is specified, the request body includes
+        removeSoftware so Partner API can remove software if the computers
+        are RMM-managed. When omitted, the API defaults removeSoftware to false.
+
     .PARAMETER ComputerIdList
         One or more computer IDs to delete.
+
+    .PARAMETER RemoveSoftware
+        When specified, asks Partner API to remove software from the computers
+        if they are RMM-managed.
 
     .EXAMPLE
         Remove-EvoComputerBulk -ComputerIdList 'id1', 'id2', 'id3'
 
         Deletes multiple computers by their IDs.
+
+    .EXAMPLE
+        Remove-EvoComputerBulk -ComputerIdList 'id1', 'id2' -RemoveSoftware
+
+        Bulk deletes computers and requests software removal if RMM-managed.
 
     .EXAMPLE
         Get-EvoComputer -Os windows | Select-Object -First 10 | Remove-EvoComputerBulk
@@ -31,7 +44,10 @@ function Remove-EvoComputerBulk {
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias('Id', 'ComputerId')]
-        [string[]]$ComputerIdList
+        [string[]]$ComputerIdList,
+
+        [Parameter()]
+        [switch]$RemoveSoftware
     )
 
     begin {
@@ -51,7 +67,8 @@ function Remove-EvoComputerBulk {
             return
         }
 
-        if (-not $PSCmdlet.ShouldProcess("$($buffer.Count) computers", 'Bulk delete')) {
+        $action = if ($RemoveSoftware) { 'Bulk delete (remove software)' } else { 'Bulk delete' }
+        if (-not $PSCmdlet.ShouldProcess("$($buffer.Count) computers", $action)) {
             return
         }
 
@@ -59,8 +76,12 @@ function Remove-EvoComputerBulk {
             computerIds = $buffer.ToArray()
         }
 
+        if ($PSBoundParameters.ContainsKey('RemoveSoftware')) {
+            $body['removeSoftware'] = [bool]$RemoveSoftware
+        }
+
         $response = Invoke-EvoApiRequest -Method 'DELETE' -Path '/v1/computers/bulk' -Body $body
-        
+
         if ($null -ne $response -and $response.PSObject.Properties['data']) {
             Write-Output $response.data
         }

@@ -7,13 +7,26 @@ function Remove-EvoComputer {
         Deletes a computer via the /v1/computers/{id} endpoint.
         This operation is asynchronous and returns an operation ID.
 
+        When -RemoveSoftware is specified, the request body includes
+        removeSoftware so Partner API can remove software if the computer
+        is RMM-managed. When omitted, the API defaults removeSoftware to false.
+
     .PARAMETER Id
         The ID of the computer to delete.
+
+    .PARAMETER RemoveSoftware
+        When specified, asks Partner API to remove software from the computer
+        if it is RMM-managed.
 
     .EXAMPLE
         Remove-EvoComputer -Id '00000000-0000-0000-0000-000000000000'
 
         Deletes the computer with the specified ID.
+
+    .EXAMPLE
+        Remove-EvoComputer -Id '00000000-0000-0000-0000-000000000000' -RemoveSoftware
+
+        Deletes the computer and requests software removal if RMM-managed.
 
     .EXAMPLE
         Get-EvoComputer -Query 'old-pc' | Remove-EvoComputer
@@ -31,17 +44,32 @@ function Remove-EvoComputer {
     param(
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipelineByPropertyName = $true)]
         [Alias('ComputerId')]
-        [string]$Id
+        [string]$Id,
+
+        [Parameter()]
+        [switch]$RemoveSoftware
     )
 
     process {
-        if (-not $PSCmdlet.ShouldProcess("Computer $Id", 'Delete')) {
+        $action = if ($RemoveSoftware) { 'Delete (remove software)' } else { 'Delete' }
+        if (-not $PSCmdlet.ShouldProcess("Computer $Id", $action)) {
             return
         }
 
         $path = "/v1/computers/$Id"
-        $response = Invoke-EvoApiRequest -Method 'DELETE' -Path $path
-        
+        $invokeParams = @{
+            Method = 'DELETE'
+            Path   = $path
+        }
+
+        if ($PSBoundParameters.ContainsKey('RemoveSoftware')) {
+            $invokeParams['Body'] = @{
+                removeSoftware = [bool]$RemoveSoftware
+            }
+        }
+
+        $response = Invoke-EvoApiRequest @invokeParams
+
         if ($null -ne $response -and $response.PSObject.Properties['data']) {
             Write-Output $response.data
         }
