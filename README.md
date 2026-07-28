@@ -689,11 +689,9 @@ Get-EvoUserHdvMethods -UserId 'USER_GUID'
 # List all HDV requests
 Get-EvoHelpDeskVerification -All
 
-# List pending HDV requests (includes reverse/link-based awaiting readback)
+# Filter by status: pending, verified, denied, failed, or expired
+# (pending includes reverse/link-based awaiting readback)
 Get-EvoHelpDeskVerification -Status pending
-
-# List denied HDV requests
-Get-EvoHelpDeskVerification -Status denied
 
 # List HDV requests by method
 Get-EvoHelpDeskVerification -Method email -All
