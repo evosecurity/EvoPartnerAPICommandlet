@@ -34,6 +34,10 @@ Describe 'EvoPartnerAPICommandlet module' {
         It 'Test-EvoPartnerApiHealth uses mocked HTTP and does not throw' {
             { Test-EvoPartnerApiHealth } | Should -Not -Throw
         }
+
+        It 'Get-EvoWebhook uses mocked HTTP and does not throw' {
+            { Get-EvoWebhook } | Should -Not -Throw
+        }
     }
 }
 

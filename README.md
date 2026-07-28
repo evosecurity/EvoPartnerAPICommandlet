@@ -665,8 +665,16 @@ Get-EvoComputer -Query 'laptop' -All
 $result = Remove-EvoComputer -Id 'COMPUTER_GUID'
 Get-EvoAsyncOperation -Id $result.operationId
 
+# Delete a computer and remove software if RMM-managed
+$result = Remove-EvoComputer -Id 'COMPUTER_GUID' -RemoveSoftware
+Get-EvoAsyncOperation -Id $result.operationId
+
 # Bulk delete computers
 $result = Get-EvoComputer -Os macos | Remove-EvoComputerBulk
+Get-EvoAsyncOperation -Id $result.operationId
+
+# Bulk delete and remove software if RMM-managed
+$result = Remove-EvoComputerBulk -ComputerIdList 'id1','id2' -RemoveSoftware
 Get-EvoAsyncOperation -Id $result.operationId
 ```
 
@@ -681,7 +689,8 @@ Get-EvoUserHdvMethods -UserId 'USER_GUID'
 # List all HDV requests
 Get-EvoHelpDeskVerification -All
 
-# List pending HDV requests
+# Filter by status: pending, verified, denied, failed, or expired
+# (pending includes reverse/link-based awaiting readback)
 Get-EvoHelpDeskVerification -Status pending
 
 # List HDV requests by method
@@ -701,18 +710,48 @@ $operation = Get-EvoAsyncOperation -Id $hdv.operationId
 $hdvId = $operation.result.helpDeskVerificationId
 
 # Get HDV request details once operation completes
-Get-EvoHelpDeskVerification -Id $hdvId
+# Responses include linkBased and reverseCode (for reverse/link-based flows)
+$details = Get-EvoHelpDeskVerification -Id $hdvId
+if ($details.linkBased -and $details.reverseCode) {
+    # User confirmed via link; display reverseCode for the technician to verify verbally
+    $details.reverseCode
+}
 
-# Verify email HDV with code
+# Verify email HDV with code (forward OTP flow only; not for link-based reverse HDV)
 Confirm-EvoHelpDeskVerificationEmail -Id 'HDV_GUID' -Code '123456'
 
-# Verify SMS HDV with code
+# Verify SMS HDV with code (forward OTP flow only)
 Confirm-EvoHelpDeskVerificationSms -Id 'HDV_GUID' -Code '654321'
 ```
 
 ---
 
-### 4.11 Directory Users
+### 4.11 Webhooks
+
+```powershell
+# Register a webhook for HDV events (secret is returned once — store it securely)
+$webhook = New-EvoWebhook -Url 'https://partner.example.com/webhooks/hdv' `
+    -Events 'hdv.challenge_sent','hdv.confirmed','hdv.denied','hdv.expired','hdv.code_matched','hdv.code_mismatch'
+$webhook.secret   # save this; it cannot be retrieved again
+
+# List registered webhooks (secrets are never included)
+Get-EvoWebhook
+
+# Disable a webhook endpoint
+Set-EvoWebhook -Id $webhook.id -Enabled $false
+
+# Re-enable a webhook endpoint
+Set-EvoWebhook -Id $webhook.id -Enabled $true
+
+# Delete a webhook endpoint
+Remove-EvoWebhook -Id $webhook.id
+```
+
+Deliveries include `X-Evo-Signature` (`sha256=<HMAC-SHA256 hex of raw body>`) and `X-Evo-Event` headers. For reverse HDV, `hdv.challenge_sent` may include `reverseCode` when the user reaches the reverse readback step.
+
+---
+
+### 4.12 Directory Users
 
 ```powershell
 # List all users in a directory
@@ -727,7 +766,7 @@ Get-EvoDirectoryUser -DirectoryId 'DIRECTORY_GUID' -Query 'john'
 
 ---
 
-### 4.12 Local Admin Accounts
+### 4.13 Local Admin Accounts
 
 ```powershell
 # List all local admin accounts
@@ -778,7 +817,7 @@ Get-EvoLocalAdminAccountPasswordRotation -Id $rotations[0].id
 
 ---
 
-### 4.10 Health Check
+### 4.14 Health Check
 
 ```powershell
 Test-EvoPartnerApiHealth

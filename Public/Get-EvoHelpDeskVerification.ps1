@@ -9,6 +9,15 @@ function Get-EvoHelpDeskVerification {
         lists HDV requests with optional filters and paging or returns all HDV
         requests when -All is specified.
 
+        Responses include linkBased and reverseCode. linkBased is true for
+        reverse (link-based) verifications. reverseCode is the readback code for
+        the technician and is present only while a reverse verification is
+        awaiting confirmation; otherwise it is null.
+
+        Status pending includes reverse verifications awaiting readback.
+        Confirm-EvoHelpDeskVerificationEmail and Confirm-EvoHelpDeskVerificationSms
+        apply to forward (OTP) flows only, not link-based reverse HDV.
+
     .PARAMETER Id
         The ID of the HDV request to retrieve.
 
@@ -20,7 +29,8 @@ function Get-EvoHelpDeskVerification {
         configuration's DefaultPageSize.
 
     .PARAMETER Status
-        Filter by HDV status: pending, verified, failed, expired, or cancelled.
+        Filter by HDV status: pending, verified, denied, failed, or expired.
+        pending includes reverse (link-based) verifications awaiting readback.
 
     .PARAMETER UserIdList
         Filter by one or more user IDs.
@@ -35,7 +45,7 @@ function Get-EvoHelpDeskVerification {
     .EXAMPLE
         Get-EvoHelpDeskVerification -Id '00000000-0000-0000-0000-000000000000'
 
-        Returns the HDV request with the specified ID.
+        Returns the HDV request with the specified ID, including linkBased and reverseCode when applicable.
 
     .EXAMPLE
         Get-EvoHelpDeskVerification -All
@@ -45,7 +55,7 @@ function Get-EvoHelpDeskVerification {
     .EXAMPLE
         Get-EvoHelpDeskVerification -Status pending -Method email
 
-        Returns all pending email HDV requests.
+        Returns all pending email HDV requests (including reverse/link-based).
 
     .EXAMPLE
         Get-EvoHelpDeskVerification -UserIdList 'user-id-1', 'user-id-2'
@@ -65,7 +75,7 @@ function Get-EvoHelpDeskVerification {
         [int]$Limit,
 
         [Parameter(ParameterSetName = 'List')]
-        [ValidateSet('pending', 'verified', 'failed', 'expired', 'cancelled')]
+        [ValidateSet('pending', 'verified', 'denied', 'failed', 'expired')]
         [string]$Status,
 
         [Parameter(ParameterSetName = 'List')]
