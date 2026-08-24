@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EvoPartnerAPICommandlet.psm1'
-    ModuleVersion     = '0.4.0'
+    ModuleVersion     = '0.5.0'
     GUID              = '11111111-2222-3333-4444-555555555555'
     Author            = 'Evo Security'
     CompanyName       = 'Evo Security'
@@ -20,7 +20,7 @@
             Tags        = @('Evo','Partner','API')
             ProjectUri  = 'https://evosecurity.com'
             LicenseUri  = 'https://evosecurity.com'
-            ReleaseNotes = 'Added webhook registration cmdlets (New/Get/Set/Remove-EvoWebhook), reverse HDV support (linkBased/reverseCode docs), and aligned HDV status filters with Partner API (pending, verified, denied, failed, expired).'
+            ReleaseNotes = 'Added RBAC v2 cmdlets (Get/New/Set/Remove-EvoRbacRole, Get-EvoPermission, Get-EvoPermissionCatalog, the Get/Add/Remove-EvoRbacRoleAssignedUser|Group role-side pair, and Get/Add/Remove-Evo{User,Group}RbacRole plus their Bulk variants). Legacy role group cmdlets are unchanged and remain supported.'
         }
     }
 }

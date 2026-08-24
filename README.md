@@ -522,7 +522,7 @@ Remove-EvoLicenseAssignment -LicenseId 'LICENSE_GUID' -UserIdList $userIds
 
 ---
 
-### 4.4 Groups & Role Groups
+### 4.4 Groups, Role Groups & RBAC v2 Roles
 
 ```powershell
 # Create a group and add members
@@ -548,6 +548,65 @@ Remove-EvoRoleGroup -Id $roleGroup.id -Confirm:$false
 # Assign role groups to a group
 Add-EvoGroupRoleGroup -GroupId $newGroup.id -RoleGroupIdList 'ROLE_GROUP_GUID'
 ```
+
+#### RBAC v2
+
+Environments with the `rbac_v2_enabled` feature flag expose a second, richer
+generation of roles. **Both generations ship side by side and the legacy
+cmdlets above keep working forever** — on a migrated environment the API
+translates them onto the new tables for you, so existing scripts need no
+changes.
+
+The two generations use **different id spaces**: a legacy role group id is not
+a valid `-RbacRoleId` and vice versa. Group ids here are the group *selector*.
+
+When the flag is off, every RBAC v2 cmdlet fails with `HTTP 409` and a message
+pointing at the legacy cmdlets.
+
+```powershell
+# Discover the catalog. Categories and permission groups are only visible here.
+Get-EvoPermissionCatalog
+Get-EvoPermission -Query 'billing' -Limit 100
+
+# List and inspect roles
+Get-EvoRbacRole
+$role = Get-EvoRbacRole -Id 'ROLE_SELECTOR_GUID'
+$role.grants.permissions
+
+# Create a role. Grants are catalog *keys* in three buckets, not role ids.
+$role = New-EvoRbacRole -Name 'Read Only' -PermissionKeyList @('view_dashboard','view_computers')
+$role = New-EvoRbacRole -Name 'Billing Admin' -CategoryKeyList @('billing')
+
+# Update. Grants are replaced wholesale; -ClearGrant removes them all.
+Set-EvoRbacRole -Id $role.id -Name 'Renamed'
+Set-EvoRbacRole -Id $role.id -CategoryKeyList @('billing','dashboard')
+Set-EvoRbacRole -Id $role.id -ClearGrant
+
+Remove-EvoRbacRole -Id $role.id -Confirm:$false
+
+# Assign from the assignee side...
+Add-EvoUserRbacRole  -UserId  $user.id  -RbacRoleIdList $role.id
+Add-EvoGroupRbacRole -GroupId $group.id -RbacRoleIdList $role.id
+Get-EvoUserRbacRole  -UserId  $user.id
+
+# ...or from the role side. Both views describe the same assignment.
+Add-EvoRbacRoleAssignedUser -RbacRoleId $role.id -UserIdList @($user.id)
+Get-EvoRbacRoleAssignedUser -RbacRoleId $role.id
+Get-EvoRbacRoleAssignedGroup -RbacRoleId $role.id
+
+# Bulk. Partial success is normal - check the failedItems array on the response.
+@(
+    [pscustomobject]@{ UserId = $a.id; RbacRoleIds = @($role.id) }
+    [pscustomobject]@{ UserId = $b.id; RbacRoleIds = @($role.id) }
+) | Add-EvoUserRbacRoleBulk
+
+@(
+    [pscustomobject]@{ GroupId = $g.id; RbacRoleIds = @($role.id) }
+) | Remove-EvoGroupRbacRoleBulk
+```
+
+> Built-in (stock) roles cannot be edited or deleted, but they **can** be
+> assigned. `Set-EvoRbacRole` and `Remove-EvoRbacRole` will fail on them.
 
 ---
 
