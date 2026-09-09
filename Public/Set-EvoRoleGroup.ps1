@@ -86,8 +86,12 @@ function Set-EvoRoleGroup {
             roleIds = @($current.roles | ForEach-Object { $_.id })
         }
 
-        # Include current description if it exists
-        if ($current.PSObject.Properties['description']) {
+        # Include the current description only when it actually has a value.
+        # The API serializer always returns a 'description' property (often $null),
+        # and the API's optional() validation rejects an explicit null
+        # ("description must be a string"), so sending null would break updates
+        # for role groups that have no description.
+        if ($current.PSObject.Properties['description'] -and $null -ne $current.description) {
             $body['description'] = $current.description
         }
 
