@@ -94,6 +94,63 @@ Describe 'EvoPartnerAPICommandlet module' {
     }
 }
 
+Describe 'Deployment token cmdlets' {
+    BeforeAll {
+        Set-EvoPartnerApiConfig -ApiKey 'TEST-KEY' -BaseUri 'https://example.invalid' -DefaultPageSize 5
+    }
+
+    BeforeEach {
+        Mock -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -MockWith {
+            [pscustomobject]@{ data = [pscustomobject]@{ id = 'token-id' } }
+        }
+    }
+
+    It 'New-EvoDeploymentToken posts the tenant, directory, UTC expiry and settings' {
+        $token = New-EvoDeploymentToken -Name 'Acme' -TenantId 'tenant-id' -DirectoryId 'dir-id' `
+            -ExpireAt ([datetime]::new(2027, 6, 1, 0, 0, 0, [System.DateTimeKind]::Utc)) -Settings @{ enableJit = $true }
+
+        $token.PSObject.TypeNames[0] | Should -Be 'Evo.DeploymentToken'
+        Should -Invoke Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -Times 1 -ParameterFilter {
+            $sent = $Body | ConvertFrom-Json
+            $Method -eq 'POST' -and $Uri -eq 'https://example.invalid/v1/deployment_tokens' -and
+                $sent.tenantId -eq 'tenant-id' -and $sent.directoryId -eq 'dir-id' -and
+                $sent.settings.enableJit -eq $true -and $Body -match '"expireAt":\s*"2027-06-01T00:00:00\.0000000Z"'
+        }
+    }
+
+    It 'Set-EvoDeploymentToken -NeverExpire sends an explicit null expireAt' {
+        Set-EvoDeploymentToken -Id 'token-id' -NeverExpire -Confirm:$false | Out-Null
+
+        Should -Invoke Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -Times 1 -ParameterFilter {
+            $Method -eq 'PUT' -and $Uri -eq 'https://example.invalid/v1/deployment_tokens/token-id' -and
+                $Body -match '"expireAt":\s*null'
+        }
+    }
+
+    It 'Set-EvoDeploymentToken sends nothing when no field is given' {
+        Set-EvoDeploymentToken -Id 'token-id' | Out-Null
+
+        Should -Invoke Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -Times 0
+    }
+
+    It 'Get-EvoDeploymentToken passes tenant filters as repeated keys' {
+        Get-EvoDeploymentToken -TenantIdList 'a', 'b' -Active 'true' | Out-Null
+
+        Should -Invoke Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -Times 1 -ParameterFilter {
+            $Method -eq 'GET' -and $Uri -match '/v1/deployment_tokens\?' -and
+                $Uri -match 'tenantIds%5B%5D=a' -and $Uri -match 'tenantIds%5B%5D=b' -and $Uri -match 'active=true'
+        }
+    }
+
+    It 'Remove-EvoDeploymentToken deletes by id' {
+        Remove-EvoDeploymentToken -Id 'token-id' -Confirm:$false | Out-Null
+
+        Should -Invoke Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -Times 1 -ParameterFilter {
+            $Method -eq 'DELETE' -and $Uri -eq 'https://example.invalid/v1/deployment_tokens/token-id'
+        }
+    }
+}
+
 InModuleScope EvoPartnerAPICommandlet {
     Describe 'Invoke-EvoApiRequest error handling' {
         It 'retries on HTTP 429 when RetryOnRateLimit is enabled' {

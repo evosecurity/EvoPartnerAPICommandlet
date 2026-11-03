@@ -645,7 +645,31 @@ Remove-EvoAccessToken -Id $newToken.id -Confirm:$false
 
 ---
 
-### 4.7 Elevated Assignments
+### 4.7 Deployment Tokens
+
+```powershell
+# List a tenant's tokens (values are masked to their first five characters)
+Get-EvoDeploymentToken -TenantIdList 'TENANT_GUID' -Active 'true'
+
+# Create a token. The full value is returned only here, so store it now.
+# -DirectoryId is required when the tenant has a non-default directory.
+$dt = New-EvoDeploymentToken -Name 'Acme rollout' -TenantId 'TENANT_GUID' -DirectoryId 'DIRECTORY_GUID' `
+    -ExpireAt (Get-Date).AddDays(30) -Settings @{ enableJit = $true; authenticationMode = 'elevation' }
+$dt.deploymentToken
+$dt.environmentUrl
+
+# Change settings (only the keys you pass change), remove the expiry, or deactivate
+Set-EvoDeploymentToken -Id $dt.id -Settings @{ uacExtension = $true }
+Set-EvoDeploymentToken -Id $dt.id -NeverExpire
+Set-EvoDeploymentToken -Id $dt.id -Active $false
+
+# Delete token (installed endpoints stay enrolled)
+Remove-EvoDeploymentToken -Id $dt.id -Confirm:$false
+```
+
+---
+
+### 4.8 Elevated Assignments
 
 ```powershell
 # Create elevated assignment
@@ -661,7 +685,7 @@ Add-EvoElevatedAssignmentDomainAccount -ElevatedAssignmentId $elev.id -DomainAcc
 
 ---
 
-### 4.8 Domain Accounts
+### 4.9 Domain Accounts
 
 ```powershell
 # List domain accounts
@@ -702,7 +726,7 @@ Get-EvoAsyncOperation -Id $result.operationId
 
 ---
 
-### 4.9 Computers (Endpoints)
+### 4.10 Computers (Endpoints)
 
 ```powershell
 # List all computers
@@ -739,7 +763,7 @@ Get-EvoAsyncOperation -Id $result.operationId
 
 ---
 
-### 4.10 Help Desk Verification (HDV)
+### 4.11 Help Desk Verification (HDV)
 
 ```powershell
 # Check available HDV methods for a user
@@ -785,7 +809,7 @@ Confirm-EvoHelpDeskVerificationSms -Id 'HDV_GUID' -Code '654321'
 
 ---
 
-### 4.11 Webhooks
+### 4.12 Webhooks
 
 ```powershell
 # Register a webhook for HDV events (secret is returned once — store it securely)
@@ -810,7 +834,7 @@ Deliveries include `X-Evo-Signature` (`sha256=<HMAC-SHA256 hex of raw body>`) an
 
 ---
 
-### 4.12 Directory Users
+### 4.13 Directory Users
 
 ```powershell
 # List all users in a directory
@@ -825,7 +849,7 @@ Get-EvoDirectoryUser -DirectoryId 'DIRECTORY_GUID' -Query 'john'
 
 ---
 
-### 4.13 Local Admin Accounts
+### 4.14 Local Admin Accounts
 
 ```powershell
 # List all local admin accounts
@@ -876,7 +900,7 @@ Get-EvoLocalAdminAccountPasswordRotation -Id $rotations[0].id
 
 ---
 
-### 4.14 Health Check
+### 4.15 Health Check
 
 ```powershell
 Test-EvoPartnerApiHealth
