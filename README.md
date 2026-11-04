@@ -884,6 +884,33 @@ Test-EvoPartnerApiHealth
 
 ---
 
+### 4.15 Elevation Requests (EUE)
+
+Requires an API key with the **Manage Elevation Requests** scope. Approve and deny are asynchronous;
+the resolver (`-ResolverId`) is the user recorded as approver/denier and must be an active admin
+with the `manage_elevation_requests` permission and access to the tenant.
+
+```powershell
+# Requests waiting for a decision
+Get-EvoElevationRequest -State pending -All
+
+# One request, including its resolution once resolved
+Get-EvoElevationRequest -Id 'er_01HAYTFG4CRA6FVCFMJQYCP2SM' -TenantId 'TENANT_GUID'
+
+# Approve (pipe-friendly: Id and TenantId bind from Get-EvoElevationRequest output)
+$op = Get-EvoElevationRequest -State pending -TenantId 'TENANT_GUID' |
+    Select-Object -First 1 |
+    Approve-EvoElevationRequest -ResolverId 'USER_GUID' -FindingsReason 'Approved by script' -ExecutionMode admin
+Get-EvoAsyncOperation -Id $op.operationId
+
+# Deny
+Deny-EvoElevationRequest -Id 'er_01HAYTFG4CRA6FVCFMJQYCP2SM' -TenantId 'TENANT_GUID' -ResolverId 'USER_GUID'
+```
+
+`-ExecutionMode system` and `-BypassUac` also require the resolver to hold `utilize_system_level_elevations`.
+
+---
+
 ## 5. MSP Scenario Examples
 
 ### 5.1 Onboard a new tenant end-to-end
