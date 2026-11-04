@@ -92,6 +92,32 @@ Describe 'EvoPartnerAPICommandlet module' {
                 Should -Throw -ExpectedMessage '*Nothing to update*'
         }
     }
+
+    Context 'Elevation request cmdlets' {
+        BeforeEach {
+            Mock -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -MockWith {
+                [pscustomobject]@{
+                    success    = $true
+                    data       = @()
+                    pagination = [pscustomobject]@{ page = 1; totalPages = 1 }
+                }
+            }
+        }
+
+        It 'exports the elevation request cmdlets' {
+            foreach ($name in 'Get-EvoElevationRequest', 'Approve-EvoElevationRequest', 'Deny-EvoElevationRequest') {
+                Get-Command -Module EvoPartnerAPICommandlet -Name $name -ErrorAction SilentlyContinue |
+                    Should -Not -BeNullOrEmpty -Because "$name should be exported"
+            }
+        }
+
+        It 'uses mocked HTTP and does not throw' {
+            { Get-EvoElevationRequest -State pending, approved } | Should -Not -Throw
+            { Get-EvoElevationRequest -Id 'er_x' -TenantId '11111111-1111-1111-1111-111111111111' } | Should -Not -Throw
+            { Approve-EvoElevationRequest -Id 'er_x' -TenantId '11111111-1111-1111-1111-111111111111' -ResolverId '22222222-2222-2222-2222-222222222222' -ExecutionMode admin -BypassUac -Confirm:$false } | Should -Not -Throw
+            { Deny-EvoElevationRequest -Id 'er_x' -TenantId '11111111-1111-1111-1111-111111111111' -ResolverId '22222222-2222-2222-2222-222222222222' -Confirm:$false } | Should -Not -Throw
+        }
+    }
 }
 
 InModuleScope EvoPartnerAPICommandlet {
