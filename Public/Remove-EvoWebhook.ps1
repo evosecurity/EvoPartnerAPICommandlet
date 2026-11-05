@@ -4,7 +4,7 @@ function Remove-EvoWebhook {
         Delete a webhook endpoint by ID.
 
     .DESCRIPTION
-        Deletes a webhook endpoint via the /v1/webhooks/{id} DELETE endpoint.
+        Deletes a webhook endpoint via the /v1/webhook_subscriptions/{id} DELETE endpoint.
 
     .PARAMETER Id
         The ID of the webhook endpoint to delete.
@@ -26,7 +26,7 @@ function Remove-EvoWebhook {
             return
         }
 
-        $path = "/v1/webhooks/$Id"
+        $path = "/v1/webhook_subscriptions/$Id"
         $response = Invoke-EvoApiRequest -Method 'DELETE' -Path $path
         Write-Output $response
     }

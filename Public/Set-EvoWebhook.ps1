@@ -1,22 +1,34 @@
 function Set-EvoWebhook {
     <#
     .SYNOPSIS
-        Enable or disable a webhook endpoint.
+        Update a webhook subscription's URL, events or enabled state.
 
     .DESCRIPTION
-        Updates a webhook endpoint via the /v1/webhooks/{id} PATCH endpoint.
-        Disabled endpoints are retained but receive no events until re-enabled.
+        Updates a webhook subscription via the /v1/webhook_subscriptions/{id} PATCH endpoint.
+        Only the parameters you pass are changed. Disabled subscriptions are retained but
+        receive no events until re-enabled, and their pending retries fail.
 
     .PARAMETER Id
-        The ID of the webhook endpoint to update.
+        The ID of the webhook subscription to update.
+
+    .PARAMETER Url
+        New publicly reachable HTTPS callback URL (port 443, no embedded credentials).
+
+    .PARAMETER Events
+        Event types that replace the subscription's current list.
 
     .PARAMETER Enabled
-        Whether deliveries to this endpoint are active.
+        Whether deliveries to this subscription are active.
 
     .EXAMPLE
         Set-EvoWebhook -Id '00000000-0000-0000-0000-000000000000' -Enabled $false
 
-        Disables deliveries to the specified webhook endpoint.
+        Disables deliveries to the specified webhook subscription.
+
+    .EXAMPLE
+        Set-EvoWebhook -Id '00000000-0000-0000-0000-000000000000' -Url 'https://partner.example.com/hooks/v2' -Events 'hdv.confirmed','hdv.denied'
+
+        Moves the subscription to a new URL and replaces its events.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
@@ -24,21 +36,42 @@ function Set-EvoWebhook {
         [Alias('WebhookId')]
         [string]$Id,
 
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter()]
+        [string]$Url,
+
+        [Parameter()]
+        [ValidateSet(
+            'hdv.challenge_sent',
+            'hdv.confirmed',
+            'hdv.denied',
+            'hdv.expired',
+            'hdv.code_matched',
+            'hdv.code_mismatch',
+            'elevation_request.created',
+            'elevation_request.resolved',
+            'elevation_request.cancelled'
+        )]
+        [string[]]$Events,
+
+        [Parameter()]
         [bool]$Enabled
     )
 
     process {
-        $action = if ($Enabled) { 'Enable' } else { 'Disable' }
-        if (-not $PSCmdlet.ShouldProcess("Webhook $Id", $action)) {
+        $body = @{}
+        if ($PSBoundParameters.ContainsKey('Url')) { $body['url'] = $Url }
+        if ($PSBoundParameters.ContainsKey('Events')) { $body['events'] = @($Events) }
+        if ($PSBoundParameters.ContainsKey('Enabled')) { $body['enabled'] = $Enabled }
+
+        if ($body.Count -eq 0) {
+            throw 'Specify at least one of -Url, -Events or -Enabled.'
+        }
+
+        if (-not $PSCmdlet.ShouldProcess("Webhook $Id", 'Update')) {
             return
         }
 
-        $body = @{
-            enabled = $Enabled
-        }
-
-        $path = "/v1/webhooks/$Id"
+        $path = "/v1/webhook_subscriptions/$Id"
         $response = Invoke-EvoApiRequest -Method 'PATCH' -Path $path -Body $body
 
         if ($null -ne $response -and $response.PSObject.Properties['data']) {
