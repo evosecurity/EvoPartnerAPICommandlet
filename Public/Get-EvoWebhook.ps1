@@ -1,25 +1,38 @@
 function Get-EvoWebhook {
     <#
     .SYNOPSIS
-        List webhook endpoints for the current environment.
+        List webhook subscriptions, or get one by ID.
 
     .DESCRIPTION
-        Retrieves all webhook endpoints registered via the /v1/webhooks endpoint.
-        Signing secrets are never included in list responses.
+        Retrieves webhook subscriptions via the /v1/webhook_subscriptions endpoint.
+        Signing secrets are never included in responses.
+
+    .PARAMETER Id
+        The ID of a single webhook subscription to retrieve.
 
     .EXAMPLE
         Get-EvoWebhook
 
-        Returns all webhook endpoints for the current environment.
+        Returns all webhook subscriptions for the current environment.
+
+    .EXAMPLE
+        Get-EvoWebhook -Id '00000000-0000-0000-0000-000000000000'
+
+        Returns one webhook subscription.
     #>
-    [CmdletBinding()]
-    param()
+    [CmdletBinding(DefaultParameterSetName = 'List')]
+    param(
+        [Parameter(ParameterSetName = 'ById', Mandatory = $true, Position = 0, ValueFromPipelineByPropertyName = $true)]
+        [Alias('WebhookId')]
+        [string]$Id
+    )
 
     process {
-        $response = Invoke-EvoApiRequest -Method 'GET' -Path '/v1/webhooks'
+        $path = if ($PSCmdlet.ParameterSetName -eq 'ById') { "/v1/webhook_subscriptions/$Id" } else { '/v1/webhook_subscriptions' }
+        $response = Invoke-EvoApiRequest -Method 'GET' -Path $path
 
         if ($null -ne $response -and $response.PSObject.Properties['data']) {
-            foreach ($webhook in $response.data) {
+            foreach ($webhook in @($response.data)) {
                 if ($webhook -is [pscustomobject]) {
                     $webhook.PSObject.TypeNames.Insert(0, 'Evo.Webhook')
                 }

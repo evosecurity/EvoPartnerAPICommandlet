@@ -1,13 +1,16 @@
 function New-EvoWebhook {
     <#
     .SYNOPSIS
-        Register a webhook endpoint for HDV event notifications.
+        Register a webhook subscription for event notifications.
 
     .DESCRIPTION
-        Registers a callback URL via the /v1/webhooks endpoint. The URL must be
+        Registers a callback URL via the /v1/webhook_subscriptions endpoint. The URL must be
         a publicly reachable HTTPS URL on port 443. A signing secret is returned
         once at registration and cannot be retrieved again. Store the secret
-        securely to verify X-Evo-Signature headers on deliveries.
+        securely to verify the X-Evo-Signature-V2 header on deliveries.
+
+        Requires an API key with canManageWebhook, or canManageHelpDeskVerification
+        for subscriptions to hdv.* events only.
 
         A maximum of 20 webhook endpoints may be registered per environment.
 
@@ -15,7 +18,7 @@ function New-EvoWebhook {
         Publicly reachable HTTPS callback URL (port 443, no embedded credentials).
 
     .PARAMETER Events
-        One or more HDV event types to subscribe to:
+        One or more event types to subscribe to:
         hdv.challenge_sent, hdv.confirmed, hdv.denied, hdv.expired,
         hdv.code_matched, hdv.code_mismatch.
 
@@ -52,7 +55,7 @@ function New-EvoWebhook {
             events = @($Events)
         }
 
-        $response = Invoke-EvoApiRequest -Method 'POST' -Path '/v1/webhooks' -Body $body
+        $response = Invoke-EvoApiRequest -Method 'POST' -Path '/v1/webhook_subscriptions' -Body $body
 
         if ($null -ne $response -and $response.PSObject.Properties['data']) {
             $webhook = $response.data

@@ -38,6 +38,37 @@ Describe 'EvoPartnerAPICommandlet module' {
         It 'Get-EvoWebhook uses mocked HTTP and does not throw' {
             { Get-EvoWebhook } | Should -Not -Throw
         }
+
+        It 'Get-EvoWebhook -Id uses mocked HTTP and does not throw' {
+            { Get-EvoWebhook -Id '00000000-0000-0000-0000-000000000000' } | Should -Not -Throw
+        }
+
+        It 'Set-EvoWebhook sends only the parameters given' {
+            Set-EvoWebhook -Id '00000000-0000-0000-0000-000000000000' -Url 'https://partner.example.com/hook' -Confirm:$false
+            Should -Invoke -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -Times 1 -ParameterFilter {
+                $Method -eq 'PATCH' -and $Uri -like '*/v1/webhook_subscriptions/00000000-0000-0000-0000-000000000000' -and
+                $Body -like '*"url"*' -and $Body -notlike '*"enabled"*' -and $Body -notlike '*"events"*'
+            }
+        }
+
+        It 'Set-EvoWebhook throws when nothing is given to change' {
+            { Set-EvoWebhook -Id '00000000-0000-0000-0000-000000000000' -Confirm:$false } | Should -Throw
+        }
+
+        It 'Test-EvoWebhook posts to the ping endpoint' {
+            Test-EvoWebhook -Id '00000000-0000-0000-0000-000000000000' -Confirm:$false
+            Should -Invoke -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -Times 1 -ParameterFilter {
+                $Method -eq 'POST' -and $Uri -like '*/v1/webhook_subscriptions/00000000-0000-0000-0000-000000000000/ping'
+            }
+        }
+
+        It 'Get-EvoWebhookDelivery passes status and paging' {
+            Get-EvoWebhookDelivery -WebhookId '00000000-0000-0000-0000-000000000000' -Status failed -Limit 2
+            Should -Invoke -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -Times 1 -ParameterFilter {
+                $Uri -like '*/v1/webhook_subscriptions/00000000-0000-0000-0000-000000000000/deliveries?*' -and
+                $Uri -like '*status=failed*' -and $Uri -like '*limit=2*'
+            }
+        }
     }
 
     Context 'RBAC v2 cmdlets' {
