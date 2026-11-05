@@ -820,6 +820,19 @@ Every delivery carries these headers:
 - `X-Evo-Signature-V2`: `sha256=<HMAC-SHA256 hex of "<timestamp>.<raw body>">`. Verify this one, and reject stale timestamps.
 - `X-Evo-Signature`: `sha256=<HMAC-SHA256 hex of raw body>`, kept for existing integrations
 
+Elevation request events need `canManageWebhook`:
+
+- `elevation_request.created`: a request is waiting for someone to approve or deny it
+- `elevation_request.resolved`: approved or denied, by a person, a rule, training mode or a category filter
+- `elevation_request.cancelled`: cancelled because the endpoint has no EUE license
+
+Their payload carries `elevationRequestId` and `tenantId`, which `Approve-EvoElevationRequest` and `Deny-EvoElevationRequest` take. Delivery is at-least-once, so deduplicate on `elevationRequestId` plus `event`.
+
+```powershell
+New-EvoWebhook -Url 'https://partner.example.com/webhooks/eue' `
+    -Events 'elevation_request.created','elevation_request.resolved','elevation_request.cancelled'
+```
+
 Responses of 5xx, 408 or 429, timeouts and network errors are retried up to 6 attempts over about 10 hours. For reverse HDV, `hdv.challenge_sent` may include `reverseCode` when the user reaches the reverse readback step.
 
 The webhook cmdlets need an API key with `canManageWebhook`. A key with only `canManageHelpDeskVerification` can manage `hdv.*` subscriptions.

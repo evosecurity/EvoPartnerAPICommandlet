@@ -46,7 +46,10 @@ function Set-EvoWebhook {
             'hdv.denied',
             'hdv.expired',
             'hdv.code_matched',
-            'hdv.code_mismatch'
+            'hdv.code_mismatch',
+            'elevation_request.created',
+            'elevation_request.resolved',
+            'elevation_request.cancelled'
         )]
         [string[]]$Events,
 

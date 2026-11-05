@@ -20,13 +20,22 @@ function New-EvoWebhook {
     .PARAMETER Events
         One or more event types to subscribe to:
         hdv.challenge_sent, hdv.confirmed, hdv.denied, hdv.expired,
-        hdv.code_matched, hdv.code_mismatch.
+        hdv.code_matched, hdv.code_mismatch, elevation_request.created,
+        elevation_request.resolved, elevation_request.cancelled.
+        The elevation_request.* events require canManageWebhook.
 
     .EXAMPLE
         New-EvoWebhook -Url 'https://partner.example.com/webhooks/hdv' -Events 'hdv.challenge_sent','hdv.confirmed','hdv.denied','hdv.expired'
 
         Registers a webhook for reverse and forward HDV lifecycle events.
         Save the returned secret; it is only returned once.
+
+    .EXAMPLE
+        New-EvoWebhook -Url 'https://partner.example.com/webhooks/eue' -Events 'elevation_request.created','elevation_request.resolved'
+
+        Gets notified when an elevation request needs a decision and when it is resolved.
+        Approve or deny it with Approve-EvoElevationRequest / Deny-EvoElevationRequest using
+        the elevationRequestId and tenantId from the payload.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
@@ -40,7 +49,10 @@ function New-EvoWebhook {
             'hdv.denied',
             'hdv.expired',
             'hdv.code_matched',
-            'hdv.code_mismatch'
+            'hdv.code_mismatch',
+            'elevation_request.created',
+            'elevation_request.resolved',
+            'elevation_request.cancelled'
         )]
         [string[]]$Events
     )
