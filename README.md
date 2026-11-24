@@ -884,6 +884,44 @@ Test-EvoPartnerApiHealth
 
 ---
 
+### 4.15 Notification Delivery Rules
+
+These cmdlets need an API key with the **Manage Notification Configuration** permission.
+
+```powershell
+# Notification types you can configure, with the channels each allows
+Get-EvoNotificationType -All
+
+# Current rules for one type, or for every type
+Get-EvoNotificationTypeRule -Key 'elevation.request_pending'
+Get-EvoNotificationType -All | Get-EvoNotificationTypeRule
+
+# Replace the rules: the list you send becomes the full list
+$operation = Set-EvoNotificationTypeRule -Key 'elevation.request_pending' -Rule @(
+    @{
+        delivery_channel = 'email'
+        recipient_spec   = @{ emails = @('soc@partner.example.com'); group_uuids = @('GROUP_ID') }
+        tenant_scope     = @{ all_tenants = $true }
+    }
+)
+Get-EvoAsyncOperation -Id $operation.operationId
+
+# Turn a type off but keep its rules: read, change, pipe back
+$current = Get-EvoNotificationTypeRule -Key 'elevation.request_pending'
+$current.enabled = $false
+$current | Set-EvoNotificationTypeRule
+
+# Remove every rule
+Set-EvoNotificationTypeRule -Key 'elevation.request_pending' -ClearRules
+```
+
+- Sending no rules deletes them all, so `Set-EvoNotificationTypeRule` requires `-Rule` or `-ClearRules`.
+- Changes are applied asynchronously. Poll the returned operation with `Get-EvoAsyncOperation`, then read the result with `Get-EvoNotificationTypeRule`. The last request processed wins.
+- Recipients use the same ids as the rest of the API: user, group and role ids, role group ids, and tenant ids in `tenant_scope.tenant_ids`.
+- `Get-EvoNotificationTypeRule` leaves out recipients and tenants that were deleted or deactivated since a rule was saved, because the API refuses them on save. A rule with none left can't be saved and notifies nobody, so it is left out with a warning.
+
+---
+
 ## 5. MSP Scenario Examples
 
 ### 5.1 Onboard a new tenant end-to-end

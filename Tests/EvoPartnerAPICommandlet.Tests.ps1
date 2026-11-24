@@ -92,6 +92,99 @@ Describe 'EvoPartnerAPICommandlet module' {
                 Should -Throw -ExpectedMessage '*Nothing to update*'
         }
     }
+
+    Context 'Notification delivery rule cmdlets' {
+        BeforeEach {
+            # t-1 is active; t-2 is deactivated (the GET still lists it, /v1/tenants does not); null is deleted.
+            Mock -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -ParameterFilter { $Uri -like '*/v1/tenants*' } -MockWith {
+                [pscustomobject]@{
+                    success    = $true
+                    data       = @([pscustomobject]@{ id = 't-1' })
+                    pagination = [pscustomobject]@{ page = 1; totalPages = 1 }
+                }
+            }
+            Mock -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -ParameterFilter { $Uri -notlike '*/v1/tenants*' } -MockWith {
+                [pscustomobject]@{
+                    success = $true
+                    data    = [pscustomobject]@{
+                        enabled     = $true
+                        psa_enabled = $false
+                        rules       = @(
+                            [pscustomobject]@{
+                                notification_type_key = 'elevation.request_pending'
+                                delivery_channel      = 'email'
+                                enabled               = $true
+                                tenant_scope          = [pscustomobject]@{ all_tenants = $false; tenant_ids = @('t-1', $null, 't-2') }
+                                recipient_lists       = [pscustomobject]@{
+                                    users       = @([pscustomobject]@{ id = 'u-1' }, [pscustomobject]@{ id = $null })
+                                    groups      = @([pscustomobject]@{ id = 'g-1' })
+                                    role_groups = @([pscustomobject]@{ uuid = 'rg-1'; name = 'Admins' }, [pscustomobject]@{ uuid = 'rg-gone'; name = $null })
+                                    roles       = @()
+                                    emails      = @('soc@example.com')
+                                }
+                            },
+                            [pscustomobject]@{
+                                notification_type_key = 'elevation.request_pending'
+                                delivery_channel      = 'in_app'
+                                enabled               = $true
+                                tenant_scope          = [pscustomobject]@{ all_tenants = $false; tenant_ids = @('t-2') }
+                                recipient_lists       = [pscustomobject]@{
+                                    users = @([pscustomobject]@{ id = 'u-1' }); groups = @(); role_groups = @(); roles = @(); emails = @()
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        It 'Get-EvoNotificationTypeRule leaves out deleted recipients, deleted role groups and deleted or deactivated tenants' {
+            $result = Get-EvoNotificationTypeRule -Key 'elevation.request_pending' -WarningAction SilentlyContinue
+            $result.NotificationTypeKey | Should -Be 'elevation.request_pending'
+            $rule = $result.rules[0]
+            @($rule.recipient_spec.user_ids) | Should -Be @('u-1')
+            @($rule.recipient_spec.group_uuids) | Should -Be @('g-1')
+            @($rule.recipient_spec.role_group_uuids) | Should -Be @('rg-1')
+            @($rule.recipient_spec.emails) | Should -Be @('soc@example.com')
+            @($rule.tenant_scope.tenant_ids) | Should -Be @('t-1')
+        }
+
+        It 'Get-EvoNotificationTypeRule drops, with a warning, a rule whose tenants are all gone' {
+            $result = Get-EvoNotificationTypeRule -Key 'elevation.request_pending' -WarningVariable warnings -WarningAction SilentlyContinue
+            @($result.rules).Count | Should -Be 1
+            $result.rules[0].delivery_channel | Should -Be 'email'
+            @($warnings).Count | Should -Be 1
+            "$($warnings[0])" | Should -BeLike "*'in_app'*deleted or deactivated*"
+        }
+
+        It 'Get-EvoNotificationTypeRule reads the active tenant list once' {
+            Get-EvoNotificationTypeRule -Key 'elevation.request_pending' -WarningAction SilentlyContinue | Out-Null
+            Should -Invoke -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -ParameterFilter { $Uri -like '*/v1/tenants*' } -Times 1 -Exactly
+        }
+
+        It 'Set-EvoNotificationTypeRule refuses to send no rules unless -ClearRules is given' {
+            { Set-EvoNotificationTypeRule -Key 'elevation.request_pending' -Enabled $false -Confirm:$false } |
+                Should -Throw -ExpectedMessage '*Sending no rules deletes them all*'
+            { Set-EvoNotificationTypeRule -Key 'elevation.request_pending' -ClearRules -Confirm:$false } | Should -Not -Throw
+        }
+
+        It 'Set-EvoNotificationTypeRule sends only writable rule fields when rules are piped back' {
+            Get-EvoNotificationTypeRule -Key 'elevation.request_pending' -WarningAction SilentlyContinue | Set-EvoNotificationTypeRule -Confirm:$false
+
+            Should -Invoke -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -ParameterFilter {
+                $Method -eq 'PATCH' -and $Body -notmatch 'recipient_lists' -and
+                $Body -match '"rules":\s*\[' -and $Body -match '"user_ids":\s*\[\s*"u-1"\s*\]' -and $Body -match '"tenant_ids":\s*\[\s*"t-1"\s*\]'
+            } -Times 1 -Exactly
+        }
+
+        It 'Set-EvoNotificationTypeRule -ClearRules sends an empty rule list' {
+            Set-EvoNotificationTypeRule -Key 'elevation.request_pending' -ClearRules -Confirm:$false
+
+            Should -Invoke -CommandName Invoke-RestMethod -ModuleName EvoPartnerAPICommandlet -ParameterFilter {
+                $Method -eq 'PATCH' -and $Body -match '"rules":\s*\[\s*\]'
+            } -Times 1 -Exactly
+        }
+    }
 }
 
 InModuleScope EvoPartnerAPICommandlet {
